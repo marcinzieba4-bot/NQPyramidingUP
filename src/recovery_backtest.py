@@ -45,6 +45,9 @@ class RecoveryConfig:
     max_units: int | None = None      # optional cap on contracts held at once
     max_stopouts: int | None = None   # optional: abandon a campaign after this many stop-outs
     max_days: float | None = None     # optional: abandon a campaign after this many days
+    unit_notional: float | None = None  # if set: each run is sized so 1 unit = this many USD of NQ
+                                        # at the run's starting point (fractional contracts, no
+                                        # reinvestment); None = 1 NQ contract per unit
 
     def label(self):
         tp = "none" if self.take_profit is None else f"{self.take_profit*100:g}%"
@@ -70,6 +73,8 @@ class RecoveryPyramid:
         self.campaigns: list = []
         self.camp = None
         self.prev = first_price
+        self.pv = cfg.point_value          # USD per point per unit (changes per run if sized)
+        self.comm = cfg.commission         # USD per unit per side
 
     # ---------------- grid helpers ----------------
     def lvl(self, k):
@@ -95,7 +100,7 @@ class RecoveryPyramid:
         heapq.heappush(self.heap, (-stop, k, self.uid))
         self.n_units += 1
         self.sum_basis += fill
-        self.cash -= self.cfg.commission
+        self.cash -= self.comm
         c = self.camp
         c["entries"] += 1
         c["max_units"] = max(c["max_units"], self.n_units)
@@ -104,7 +109,7 @@ class RecoveryPyramid:
         u = self.units.pop(k)
         self.n_units -= 1
         self.sum_basis -= u["basis"]
-        pv, comm = self.cfg.point_value, self.cfg.commission
+        pv, comm = self.pv, self.comm
         self.cash += (fill - u["basis"]) * pv - comm
         pnl = u["banked"] + (fill - u["basis"]) * pv - 2 * comm
         self.trades.append((self.camp["id"], k, u["ets"], u["entry"], ts, fill, pnl, reason))
@@ -141,7 +146,15 @@ class RecoveryPyramid:
             self._sell(k, fill, ts, reason)
 
     # ---------------- campaigns ----------------
+    def _size_run(self):
+        """fixed-notional sizing: 1 unit = unit_notional USD of NQ at this run's start."""
+        if getattr(self.cfg, "unit_notional", None):
+            contracts = self.cfg.unit_notional / (self.P0 * self.cfg.point_value)
+            self.pv = self.cfg.point_value * contracts
+            self.comm = self.cfg.commission * contracts
+
     def _start(self, ts, fill):
+        self._size_run()
         self.state = ACTIVE
         self.camp = dict(id=len(self.campaigns) + 1, start=ts, wave_high=self.H, wave_low=self.L,
                          pullback_pct=(1 - self.L / self.H) * 100, start_price=self.P0,
@@ -233,13 +246,13 @@ class RecoveryPyramid:
         self.prev = c
 
     def equity(self, price):
-        return self.cash + (self.n_units * price - self.sum_basis) * self.cfg.point_value
+        return self.cash + (self.n_units * price - self.sum_basis) * self.pv
 
     def rescale(self, r):
         """Year boundary in a continuous run: the next year's NQ series sits at a
         different level (new front-month basis, carry reset).  Treat it like a
         futures roll: bank open P&L, multiply every price level by r."""
-        pv = self.cfg.point_value
+        pv = self.pv
         for u in self.units.values():
             booked = (self.prev - u["basis"]) * pv
             u["banked"] += booked

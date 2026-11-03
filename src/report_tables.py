@@ -82,6 +82,7 @@ def main():
     long_tables(r)
     breakout_tables(r)
     variant_tables(r, "recovery30")
+    sizing_tables(r)
 
 
 def recovery_tables(r):
@@ -315,6 +316,45 @@ def variant_tables(r, name):
         cell = lambda v: (lambda x: f"{k(x.total)} ({k(x.option_pnl)})")(g[g.vol_vs_vxn.astype(float) == v].iloc[0])
         dd = g[g.vol_vs_vxn.astype(float) == 0.9].iloc[0].worst_drawdown
         print(f"| {ov[0].upper() + ov[1:]} | {cell(0.8)} | {cell(0.9)} | {cell(1.0)} | {k(dd)} |")
+
+
+
+def sizing_tables(r):
+    sd = os.path.join(r, "sizing")
+    if not os.path.exists(os.path.join(sd, "calmar_100k_per_unit.csv")):
+        return
+    d = pd.read_csv(os.path.join(sd, "calmar_100k_per_unit.csv"))
+    meta = pd.read_csv(os.path.join(sd, "meta.csv")).iloc[0]
+    ys = [str(y) for y in range(2008, 2027)]
+    d["mean_std"] = d[ys].mean(axis=1) / d[ys].std(axis=1)
+    print("\n### sizing ranking\n")
+    print("| Version | Average profit per year | Worst drawdown | When | Calmar | Yearly avg / std. dev. | Worst year | Losing years | Max units held |")
+    print("|---|---:|---:|---|---:|---:|---:|---:|---:|")
+    for _, x in d.iterrows():
+        when = f"{pd.Timestamp(x.dd_peak):%d %b %Y} – {pd.Timestamp(x.dd_trough):%d %b %Y}"
+        print(f"| {x.version} | {k(x.avg_per_year)} | {k(x.max_drawdown)} | {when} | **{x.calmar:.2f}** | {x.mean_std:.2f} | "
+              f"{k(x.worst_year)} | {int(x.losing_years)} of 19 | {int(x.max_units)} |")
+    print("\n### sizing by year\n")
+    top = ["Pyramid from the January open (D)", "Recovery 70%, reset +20%", "Recovery, entry 61.8%",
+           "Buy & hold ($100k each January)"]
+    hdr = ["Pyramid from January (D)", "Recovery 70%, reset +20%", "Recovery 61.8%, reset +12%", "Buy & hold"]
+    print("| Year | " + " | ".join(hdr) + " |")
+    print("|---|" + "---:|" * len(hdr))
+    for y in ys:
+        print(f"| {y if y != '2026' else '2026 YTD'} | " + " | ".join(k(d[d.version == t].iloc[0][y]) for t in top) + " |")
+    f = meta.mnq_notional_usd / meta.unit_usd
+    pick = ["Pyramid from the January open (D)", "Recovery 70%, reset +20%", "Recovery 61.8%, reset +20%",
+            "Recovery, entry 61.8%", "Recovery, entry 70% (base)", "Breakout, 8% pullback, +4% target",
+            "Buy & hold ($100k each January)"]
+    print("\n### sizing capital\n")
+    print(f"(1 unit = 1 MNQ = ${meta.mnq_notional_usd:,.0f} of NQ at {meta.last_nq_price:,.2f})\n")
+    print("| Version | Worst drawdown | Max MNQ held | Account if worst drawdown = 50% | Account if = 33% | Average profit per year | Yearly return on the 33% account |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for name in pick:
+        x = d[d.version == name].iloc[0]
+        dd = -x.max_drawdown * f
+        print(f"| {name} | -${dd/1e3:,.0f}k | {int(x.max_units)} | ${2*dd/1e3:,.0f}k | ${3*dd/1e3:,.0f}k | "
+              f"+${x.avg_per_year*f/1e3:,.0f}k | {x.avg_per_year*f/(3*dd)*100:.0f}% |")
 
 
 if __name__ == "__main__":

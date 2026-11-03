@@ -291,6 +291,37 @@ def variant_chart(res, name, title, out):
     plt.close(fig)
 
 
+def sizing_chart(res, out):
+    sd = os.path.join(res, "sizing")
+    eq = pd.read_csv(os.path.join(sd, "equity_daily_100k_per_unit.csv"), index_col=0, parse_dates=True)
+    lines = [("Pyramid from the January open (D)", COL["B"]),
+             ("Recovery 70%, reset +20%", COL["E"]),
+             ("Recovery, entry 61.8%", COL["D"]),
+             ("Recovery, entry 70% (base)", "#6250d6"),
+             ("Buy & hold ($100k each January)", COL["BH"])]
+    worst = pd.read_csv(os.path.join(sd, "calmar_100k_per_unit.csv")).set_index("version")["max_drawdown"]
+    esc = lambda t: t.replace("$", r"\$")          # keep matplotlib from reading $...$ as math
+    fig, axs = plt.subplots(2, 1, figsize=(11, 8.2), dpi=150, sharex=True,
+                            gridspec_kw={"height_ratios": [1.3, 1.0]})
+    for col, color in lines:
+        v = eq[col].dropna()
+        axs[0].plot(v.index, v.values, color=color, lw=1.5, label=esc(f"{col}:  {usd(v.iloc[-1])}"))
+        dd = v - v.cummax()
+        axs[1].plot(dd.index, dd.values, color=color, lw=1.3,
+                    label=esc(f"{col}: worst {usd(worst[col])}"))
+    for ax in axs:
+        ax.axhline(0, color=AXIS, lw=1)
+        ax.yaxis.set_major_formatter(mt.FuncFormatter(lambda x, _: esc(usd_axis(x))))
+        ax.legend(frameon=False, fontsize=8.5, loc="upper left" if ax is axs[0] else "lower left")
+    axs[0].set_title(esc("Cumulative P&L per $100k unit (each run sized at $100k of NQ, no reinvestment)"))
+    axs[1].set_title(esc("Drawdown from the previous peak, per $100k unit (daily closes; worst value from 1-minute data)"))
+    fig.text(0.01, 0.01, esc("1 unit = $100k of NQ at the start of each run (about 1.8 MNQ at today's price). "
+             "Each year starts fresh in January; 2026 = to Nov 2."), fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.savefig(os.path.join(out, "sizing_100k_per_unit.png"))
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default="results")
@@ -308,4 +339,6 @@ if __name__ == "__main__":
         breakout_chart(a.results, out)
     if os.path.exists(os.path.join(a.results, "recovery30", "equity_daily.csv")):
         variant_chart(a.results, "recovery30", "Recovery entries at 30%", out)
+    if os.path.exists(os.path.join(a.results, "sizing", "equity_daily_100k_per_unit.csv")):
+        sizing_chart(a.results, out)
     print("charts written to", out)

@@ -4,7 +4,95 @@
 
 All dollar figures are for **1 unit = 1 NQ contract ($20 per point)**. **For MNQ, divide every dollar figure by 10.** Figures are net of costs (0.5 pt slippage plus $2.50 commission per contract per side). The 2026 run stops at the **November 2, 2026** close (year to date).
 
-**New:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls). A breakout version (beat the 1-year high after a 3% pullback, +5% target, 0.5% steps) is in [Breakout entries](#breakout-entries-beating-the-1-year-high-after-a-3-pullback). Entering at 30% of the rebound, with 20-delta calls, is in [Recovery entries at 30%](#recovery-entries-at-30-of-the-rebound-with-20-delta-calls).
+**Start here:** [Which version is best? Sized properly](#which-version-is-best-sized-properly-100k-per-unit-no-reinvestment) compares every version at a constant $100k per unit (Calmar ratio and the account size you need).
+
+**Also:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls). A breakout version (beat the 1-year high after a 3% pullback, +5% target, 0.5% steps) is in [Breakout entries](#breakout-entries-beating-the-1-year-high-after-a-3-pullback). Entering at 30% of the rebound, with 20-delta calls, is in [Recovery entries at 30%](#recovery-entries-at-30-of-the-rebound-with-20-delta-calls).
+
+## Which version is best? Sized properly: $100k per unit, no reinvestment
+
+**Why the earlier dollar figures mislead.** Every earlier table used 1 NQ contract per unit and never reinvested. But one contract was worth about $24k of NQ in 2009 and $563k in 2026, so the same 1% move was worth about 20 times more dollars in recent years. That is why the big drawdowns all show up late, after large profits had already been banked. For example, the 70% recovery version's worst drawdown ran from Dec 16, 2024 (cumulative profit $965k) to Jun 22, 2025 ($608k).
+
+**Method here.** Every run is sized so that **1 unit = $100k of NQ at the run's start**, and profits are never reinvested.
+- For the pyramid from January and buy & hold, a run is each January.
+- For the recovery and breakout versions, a run is each campaign.
+- Contracts can be fractional, and costs are scaled to match. The rules and data are unchanged.
+
+**Calmar** = average profit per year ÷ worst peak-to-trough drawdown. Both are in dollars per $100k unit, so the ratio does not depend on the unit size.
+
+| Version | Average profit per year | Worst drawdown | When | Calmar | Yearly avg / std. dev. | Worst year | Losing years | Max units held |
+|---|---:|---:|---|---:|---:|---:|---:|---:|
+| Pyramid from the January open (D) | +$204k | -$646k | 02 Sep 2020 – 24 Sep 2020 | **0.32** | 0.55 | -$255k | 7 of 19 | 46 |
+| Buy & hold ($100k each January) | +$17k | -$57k | 02 Jan 2008 – 09 Mar 2009 | **0.29** | 0.65 | -$44k | 3 of 19 | 1 |
+| Recovery 70%, reset +20% | +$59k | -$217k | 30 Aug 2018 – 10 Oct 2019 | **0.27** | 0.52 | -$129k | 6 of 19 | 19 |
+| Recovery 61.8%, reset +20% | +$65k | -$253k | 30 Aug 2018 – 10 Oct 2019 | **0.25** | 0.50 | -$150k | 7 of 19 | 19 |
+| Recovery 50%, reset +20% | +$67k | -$283k | 30 Aug 2018 – 03 Oct 2019 | **0.24** | 0.48 | -$175k | 7 of 19 | 19 |
+| Recovery, entry 61.8% | +$36k | -$154k | 28 Nov 2014 – 28 Jun 2016 | **0.23** | 0.53 | -$98k | 5 of 19 | 12 |
+| Breakout, 8% pullback, +4% target | +$7k | -$34k | 04 Nov 2015 – 31 Oct 2019 | **0.22** | 0.61 | -$9k | 4 of 19 | 8 |
+| Recovery 70%, no reset | +$124k | -$638k | 02 Sep 2020 – 24 Sep 2020 | **0.19** | 0.40 | -$129k | 7 of 19 | 45 |
+| Recovery 70%, reset +16% | +$39k | -$217k | 30 Aug 2018 – 10 Oct 2019 | **0.18** | 0.43 | -$129k | 6 of 19 | 15 |
+| Recovery, entry 50% | +$35k | -$207k | 02 May 2011 – 05 Jul 2013 | **0.17** | 0.44 | -$145k | 4 of 19 | 12 |
+| Recovery, entry 30% | +$32k | -$192k | 13 Mar 2018 – 03 Apr 2020 | **0.16** | 0.42 | -$104k | 6 of 19 | 12 |
+| Recovery 61.8%, reset +16% | +$39k | -$253k | 30 Aug 2018 – 10 Oct 2019 | **0.15** | 0.40 | -$150k | 7 of 19 | 15 |
+| Recovery, entry 40% | +$31k | -$238k | 02 May 2011 – 05 Jul 2013 | **0.13** | 0.34 | -$162k | 6 of 19 | 12 |
+| Recovery, entry 20% | +$34k | -$266k | 06 Jun 2008 – 12 Mar 2009 | **0.13** | 0.41 | -$159k | 5 of 19 | 12 |
+| Recovery, entry 70% (base) | +$23k | -$188k | 26 Apr 2010 – 27 Aug 2013 | **0.12** | 0.46 | -$84k | 5 of 19 | 12 |
+| Recovery 70%, 8% pullback | +$21k | -$182k | 26 Apr 2010 – 21 May 2014 | **0.12** | 0.51 | -$82k | 5 of 19 | 12 |
+| Recovery, entry 80% | +$20k | -$174k | 30 Aug 2018 – 23 Oct 2019 | **0.12** | 0.36 | -$110k | 6 of 19 | 12 |
+| Breakout as specified (3% / +5% / 0.5%) | +$1k | -$98k | 02 Mar 2015 – 31 Oct 2019 | **0.01** | 0.07 | -$29k | 8 of 19 | 10 |
+
+![Sized at $100k per unit](results/charts/sizing_100k_per_unit.png)
+
+**The top versions, year by year (per $100k unit):**
+
+| Year | Pyramid from January (D) | Recovery 70%, reset +20% | Recovery 61.8%, reset +12% | Buy & hold |
+|---|---:|---:|---:|---:|
+| 2008 | -$1k | -$22k | -$37k | -$44k |
+| 2009 | +$1.05M | +$246k | +$91k | +$55k |
+| 2010 | +$78k | +$180 | +$128k | +$18k |
+| 2011 | -$171k | -$84k | -$98k | +$2k |
+| 2012 | -$45k | -$22k | -$31k | +$13k |
+| 2013 | +$435k | +$175k | +$57k | +$33k |
+| 2014 | +$148k | +$132k | +$68k | +$21k |
+| 2015 | -$80k | -$82k | -$78k | +$7k |
+| 2016 | +$5k | +$37k | +$26k | +$10k |
+| 2017 | +$421k | +$40k | +$53k | +$32k |
+| 2018 | -$255k | -$129k | +$21k | -$3k |
+| 2019 | +$598k | +$59k | +$17k | +$40k |
+| 2020 | +$765k | +$197k | +$168k | +$49k |
+| 2021 | +$206k | +$128k | +$32k | +$27k |
+| 2022 | -$2k | $0 | -$3k | -$34k |
+| 2023 | +$750k | +$197k | +$88k | +$46k |
+| 2024 | +$52k | -$66k | +$108k | +$21k |
+| 2025 | +$5k | +$131k | +$27k | +$15k |
+| 2026 YTD | -$123k | +$168k | +$37k | +$6k |
+
+**How much account you need.** The smallest practical unit is 1 MNQ, which is $56,255 of NQ at today's price (28,127.50). Everything scales linearly with the unit size; the table uses 1 unit = 1 MNQ.
+
+| Version | Worst drawdown | Max MNQ held | Account if worst drawdown = 50% | Account if = 33% | Average profit per year | Yearly return on the 33% account |
+|---|---:|---:|---:|---:|---:|---:|
+| Pyramid from the January open (D) | -$363k | 46 | $727k | $1,090k | +$115k | 11% |
+| Recovery 70%, reset +20% | -$122k | 19 | $244k | $366k | +$33k | 9% |
+| Recovery 61.8%, reset +20% | -$143k | 19 | $285k | $428k | +$36k | 8% |
+| Recovery, entry 61.8% | -$86k | 12 | $173k | $259k | +$20k | 8% |
+| Recovery, entry 70% (base) | -$106k | 12 | $212k | $317k | +$13k | 4% |
+| Breakout, 8% pullback, +4% target | -$19k | 8 | $38k | $57k | +$4k | 7% |
+| Buy & hold ($100k each January) | -$32k | 1 | $65k | $97k | +$9k | 10% |
+
+**The pick and what it means:**
+
+- **Best Calmar: the original pyramid from the January open (D), at 0.32.** That is only slightly better than buy & hold (0.29), and D needs by far the most capital: up to 46 units at the peak, and a worst drawdown of -$646k per $100k unit.
+  - That drawdown happened in 3 weeks (Sep 2–24, 2020), right after the pyramid had grown to 40+ units in the 2020 rally.
+  - D's profits also come from a few big years: 2009 alone is +$1.05M of its +$3.84M.
+- **Best of the recovery versions: 70% entry with a +20% reset (Calmar 0.27).** It needs about a third of D's capital for similar risk-adjusted returns.
+  - The 61.8% / +12% version, which looked best on 1-contract dollars, drops to 0.23.
+  - The 70% / +12% base drops to 0.12, worse than buy & hold. The 1-contract ranking was distorted by the price level.
+- **Per unit of yearly volatility, buy & hold is still best** (0.65 against 0.50–0.55). None of the pyramids clearly beats simply holding NQ on risk-adjusted terms; they trade higher returns for proportionally larger drawdowns.
+- **Return on capital ≈ Calmar × the drawdown you accept.** If you size so the worst historical drawdown would have been a third of your account, expect roughly 8–11% a year (non-compounded) from the top versions, against about 10% for buy & hold.
+- **With a $100k account, the pyramids don't fit, even at the minimum size of 1 MNQ per unit.** The worst drawdown would have been about $86k (61.8% recovery version), $122k (70% / +20%) or $363k (pyramid from January). Only buy & hold (worst about $32k per MNQ) or the small 8% / +4% breakout version (about $19k, but only about $4k a year) stay within a $100k account.
+- **Margin at the peak position is roughly $3k per MNQ** (check your broker): about $150k for D's 46 MNQ, $60k for 19 and $40k for 12. The accounts in the table above cover it.
+- **Plan for worse than history.** Calmar rests on a single worst event, and the next one can be bigger. A common rule is to size for 1.5–2 times the historical worst drawdown.
+
+Files: `results/sizing/` (ranking with per-year results, daily equity per $100k unit, current MNQ value). Code: `src/run_sizing.py`; all engines take a `unit_notional` setting.
 
 ## The answer
 
@@ -605,6 +693,10 @@ python3 src/run_variant.py --name recovery30 --retrace 0.30 --neighbors retrace=
 ```
 
 ```bash
+python3 src/run_sizing.py --dukascopy data/dukascopy/USATECHIDXUSD_1min_mid.csv.gz --histdata data/histdata/NSXUSD_1min.csv.gz --hf data/hf_nasdaq60 --yahoo data/yahoo --out results
+```
+
+```bash
 python3 src/make_charts.py --results results && python3 src/report_tables.py --results results
 ```
 
@@ -621,6 +713,7 @@ The Dukascopy download (about 3,500 small files) throttles. The script retries a
 | `src/history_estimate.py` | 1986 to 2025 model estimate from daily data |
 | `src/recovery_backtest.py`, `src/run_recovery.py` | Recovery-entry version: rules, fills, self-tests; runner and sensitivity |
 | `src/long_history.py`, `src/run_long.py` | 2008–2026: stitched yearly NQ series from three sources; recovery strategy, variants, covered calls |
+| `src/run_sizing.py` | Every version at $100k per unit (no reinvestment): Calmar ranking, drawdowns, daily equity |
 | `src/run_variant.py` | Any recovery setting on 2008–2026 in one command: both modes, neighbours, 20-delta calls with a pricing stress test |
 | `src/breakout_backtest.py`, `src/run_breakout.py` | 1-year-high breakout version: rules (with self-tests), runner, variants and grid |
 | `src/options_overlay.py`, `src/calls_sensitivity.py` | Covered-call overlay (Black-76 priced from VXN, with self-tests) and its stress test |

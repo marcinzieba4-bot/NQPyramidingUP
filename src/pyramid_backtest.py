@@ -44,6 +44,8 @@ class Config:
     commission: float = 2.50        # USD per contract per side
     point_value: float = 20.0       # NQ = $20/pt (MNQ = $2/pt)
     max_ladder: int | None = None   # optional cap on simultaneously open add-ons
+    unit_notional: float | None = None  # if set: 1 unit = this many USD of NQ at the January open
+                                        # (fractional contracts); None = 1 NQ contract per unit
     name: str = ""
 
     def label(self):
@@ -74,6 +76,9 @@ def run(bars: pd.DataFrame, cfg: Config) -> Result:
     pv, slip, comm = cfg.point_value, cfg.slippage, cfg.commission
     g = math.log1p(cfg.step)
     P0 = O[0]
+    if cfg.unit_notional:
+        contracts = cfg.unit_notional / (P0 * cfg.point_value)
+        pv, comm = pv * contracts, comm * contracts
 
     def lvl(k):
         return P0 * math.exp(g * k)
@@ -197,6 +202,7 @@ def run(bars: pd.DataFrame, cfg: Config) -> Result:
     equity = pd.Series(eq, index=ts, name="equity_usd")
     units = pd.Series(un, index=ts, name="units")
     res = Result(cfg, tr, equity, units)
+    res.pv = pv
     res.stats = summarize(res, bars)
     return res
 
@@ -211,7 +217,8 @@ def summarize(res: Result, bars: pd.DataFrame) -> dict:
     peak = eq.cummax()
     dd = eq - peak
     i_dd = dd.idxmin()
-    bh = (Pend - P0) * cfg.point_value
+    pv = getattr(res, "pv", cfg.point_value)
+    bh = (Pend - P0) * pv
     return {
         "variant": cfg.label(),
         "start": bars.index[0], "end": bars.index[-1],
@@ -229,7 +236,7 @@ def summarize(res: Result, bars: pd.DataFrame) -> dict:
         "units_held_at_end": int(len(held) + len(core)),
         "held_units_pnl_usd": round(held.pnl_usd.sum() + core.pnl_usd.sum(), 0),
         "max_units": int(res.units.max()),
-        "max_notional_usd": round(float((res.units * bars["close"]).max() * cfg.point_value), 0),
+        "max_notional_usd": round(float((res.units * bars["close"]).max() * pv), 0),
         "max_drawdown_usd": round(dd.min(), 0),
         "max_dd_time": i_dd,
         "peak_equity_usd": round(peak.max(), 0),

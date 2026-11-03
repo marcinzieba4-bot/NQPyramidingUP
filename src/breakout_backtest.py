@@ -42,6 +42,7 @@ class BreakoutConfig:
     max_units: int | None = None
     max_stopouts: int | None = None      # (interface of RecoveryPyramid; unused)
     max_days: float | None = None
+    unit_notional: float | None = None
 
     def label(self):
         tp = "none" if self.take_profit is None else f"{self.take_profit*100:g}%"
@@ -97,6 +98,7 @@ class BreakoutPyramid(RecoveryPyramid):
             self.state = ARMED
 
     def _start(self, ts, fill):
+        self._size_run()
         self.state = ACTIVE
         self.camp = dict(id=len(self.campaigns) + 1, start=ts, breakout_level=self.P0,
                          target=self.target(), cash0=self.cash, entries=0, stopouts=0, max_units=0)
