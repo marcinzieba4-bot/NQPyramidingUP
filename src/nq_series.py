@@ -95,3 +95,45 @@ def build_year(cfd, ndx, nqf, irx, year, last_date=None, carry=True, spread=0.0)
                 carry_pts=float(out["carry_pts"].iloc[-1]) if carry else 0.0, bars=len(out),
                 carry_spread=spread)
     return out, meta
+
+
+def load_inputs(cfd_path, yahoo_dir):
+    """CFD bars, Yahoo NDX / NQ=F / ^IRX, and the last date both sources cover."""
+    cfd = load_cfd(cfd_path)
+    ndx = load_yahoo(yahoo_dir, "NDX")
+    nqf = load_yahoo(yahoo_dir, "NQ_F")
+    irx = load_yahoo(yahoo_dir, "IRX")
+    last_cfd_day = cfd.index[-1].tz_convert(ET).normalize().tz_localize(None)
+    return cfd, ndx, nqf, irx, min(ndx.index[-1], last_cfd_day)
+
+
+def rolled_nq_points(nqf, ndx):
+    """Daily point changes of a rolled front-month NQ position: Yahoo NQ=F closes,
+    with contract-switch (roll) days replaced by the cash index % move."""
+    m = nqf[["close"]].join(ndx[["close"]], rsuffix="_ndx", how="inner")
+    rn, rx = m.close.pct_change(), m.close_ndx.pct_change()
+    roll = (rn - rx).abs() > 0.004
+    m["pts"] = np.where(roll, rx * m.close.shift(1), m.close.diff())
+    return m
+
+
+def build_year_calibrated(cfd, ndx, nqf, irx, year, last_date, rolled):
+    """build_year with the extra financing spread solved so that the year's
+    close-to-close move equals the real rolled NQ contract.
+    Returns (bars, meta, check) with check = (year, real_pts, model_pts_uncalibrated,
+    model_pts, spread, cash_index_pts)."""
+    def c2c(spread):
+        b, mt = build_year(cfd, ndx, nqf, irx, year, last_date=last_date, spread=spread)
+        t_c0 = (pd.Timestamp(mt["first_day"]).tz_localize(ET)
+                + pd.Timedelta(hours=16)).tz_convert("UTC")
+        return b, mt, b["close"].iloc[-1] - b["close"].loc[:t_c0].iloc[-1]
+    _, meta0, pts0 = c2c(0.0)
+    yr = rolled[(rolled.index >= pd.Timestamp(meta0["first_day"]))
+                & (rolled.index <= pd.Timestamp(meta0["last_day"]))]
+    real_pts = yr.pts.iloc[1:].sum()
+    _, _, pts1 = c2c(0.01)
+    spread = 0.01 * (pts0 - real_pts) / (pts0 - pts1)
+    bars, meta, model_pts = c2c(spread)
+    check = (year, real_pts, pts0, model_pts, spread,
+             yr.close_ndx.iloc[-1] - yr.close_ndx.iloc[0])
+    return bars, meta, check

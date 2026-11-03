@@ -4,6 +4,8 @@
 
 All dollar figures are for **1 unit = 1 NQ contract ($20 per point)**. **For MNQ, divide every dollar figure by 10.** Figures are net of costs (0.5 pt slippage plus $2.50 commission per contract per side). The 2026 run stops at the **November 2, 2026** close (year to date).
 
+**New:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks).
+
 ## The answer
 
 ![P&L by year](results/charts/pnl_by_year.png)
@@ -39,6 +41,91 @@ Profitable years still came with drawdowns of **$0.8M to $1.3M per NQ unit**.
 6. **A cap on the pyramid helped (variant E), with a caveat.** Variant E never holds more than 10 contracts. It made **+$1.26M with a worst drawdown of -$756k**, versus +$1.23M and -$1.41M without the cap. Its 2026 loss so far is -$72k instead of -$633k. The cost is upside in a very strong trend year: 2023 made +$0.83M instead of +$1.67M. The caveat: I chose the cap after seeing these 5 years, so treat it as a sensible risk control rather than a proven improvement.
 7. **Do not re-buy below the January price without a trend filter (variant B).** In B, once the first unit is stopped, a unit is bought on every +1% bounce at any price. It had the largest total (+$3.48M), because it caught the whole April 2025 rebound (+$2.50M that year). It also **lost $1.29M in 2022, from 505 whipsaws in a volatile bear market**, and its worst drawdown was -$2.2M.
 8. **Long-run reality check (model estimate, 1986 to 2025).** The strategy as specified would have been profitable in only **19 of 40 years** (13 of 26 since 2000), with a median year near zero. Its mean result was strongly positive (+1.3 to +2.3 times one contract's January value per year), driven by rare huge trend years: 1991, 1995 to 1996, 1998 to 1999, 2003, 2009, 2013, 2017, 2019 to 2020, and 2023. **Per unit of risk it was about the same as buy and hold** (mean/std 0.35 to 0.37 versus 0.36 to 0.50). It does not add edge. It turns a long-NQ view into a lottery-like payoff: frequent moderate losses and occasional very large wins. Use it when you specifically want that skew and expect a strong trend year, not as an all-weather system.
+
+## Only trading recoveries from 5% pullbacks
+
+Same pyramid, but it only starts when NQ climbs back out of a pullback of at least 5%:
+
+1. **Swing high.** Track the highest price since the last reset. Once NQ is at least 5% below it, the wave is armed, and the wave low is tracked.
+2. **Starting point.** Wave low + 70% × (swing high − wave low). When NQ climbs back above it, buy 1 unit.
+3. **Same pyramid from there.** +1 unit at every +1% above the starting point. Each unit is stopped 1% below its entry and bought again if price climbs back through its level.
+4. **Cancel.** If the selloff extends to a new low below the wave low, the campaign ends (every unit has been stopped by then). The 70% level of the extended wave becomes the new starting point.
+5. **Reset at +12%.** At 12% above the starting point, sell everything and wait for the next 5% pullback.
+
+Two interpretation choices. "12% profit" is read as price 12% above the starting point. The swing high stays at the last high before the selloff; it is not lowered to bear-market rally highs. As in the main test, each year starts fresh in January (the swing high starts at the January open) and closes at the December close. A run straight through 2022 to 2026 without the January restart is shown alongside.
+
+| Year | Buy & hold 1 NQ | Pyramid from the January open (D) | **Recovery entries** | Recovery entries, run straight through |
+|---|---:|---:|---:|---:|
+| 2022 | -$111k | -$7k | **$0** | $0 |
+| 2023 | +$102k | +$1.67M | **+$211k** | +$31k |
+| 2024 | +$70k | +$175k | **+$127k** | +$222k |
+| 2025 | +$63k | +$23k | **+$108k** | -$32k |
+| 2026 YTD | +$33k | -$633k | **+$246k** | +$213k |
+| **Total** | **+$157k** | **+$1.23M** | **+$692k** | **+$434k** |
+
+Worst drawdown: **-$374k** for recovery entries (-$536k run straight through), against -$1.41M for the pyramid from the January open.
+
+![Recovery campaigns](results/charts/recovery_2022_2026.png)
+
+| Year | Recovery entries | Campaigns (hit +12% / cancelled) | Stop-outs | Max contracts | Time in market | Worst drawdown |
+|---|---:|---:|---:|---:|---:|---:|
+| 2022 | **$0** | 0 (0 / 0) | 0 | 0 | 0% | $0 |
+| 2023 | **+$211k** | 4 (1 / 2) | 28 | 12 | 32% | -$75k |
+| 2024 | **+$127k** | 2 (1 / 0) | 49 | 12 | 44% | -$246k |
+| 2025 | **+$108k** | 3 (1 / 1) | 43 | 12 | 34% | -$144k |
+| 2026 YTD | **+$246k** | 3 (1 / 1) | 23 | 12 | 22% | -$139k |
+| **Total** | **+$692k** | 12 (4 / 4) | 143 | 12 | | |
+
+**What this means:**
+
+- **It sat out the 2022 bear market completely.** The rebounds in March, August and November 2022 never got back to 70% of the decline from the January high, so no position was taken.
+- **It avoided the 2026 chop at the highs:** +$246k instead of -$633k.
+- **Every year it traded was positive** (+$108k to +$246k). It never held more than 12 contracts (39 for the January pyramid) and was in the market only 22% to 44% of the time.
+- **Risk-adjusted it was better, but it gives up the big trend year.** 2023 made +$211k instead of +$1.67M: the +12% reset caps each pyramid at about 12 contracts, and the strategy is flat between campaigns. The total is +$692k against +$1.23M for the January pyramid, but total ÷ worst drawdown is 1.85 against 0.87.
+- **Wins are big, losses are many but smaller.** Only 4 of 12 campaigns reached +12%, and those made $136k to $366k each. Of the other 8, one made +$81k (closed at the 2023 year-end) and seven lost between $3k and $111k.
+- **Results depend heavily on details: there are only 12 campaigns in five years.**
+  - Running straight through instead of restarting each January gave +$434k. One campaign from August 2024 chopped for 7.5 months without reaching +12% and lost $362k when the April 2025 crash broke its low.
+  - A 3% pullback trigger cut the total to +$231k (-$218k run straight through).
+  - A 20% take-profit more than doubled the total (+$1.62M) but also nearly doubled the drawdown (-$702k).
+  - Treat 5% / 70% / 12% as reasonable settings, not optimised ones.
+- **An idea to test next:** the expensive campaigns were the long, choppy ones (40 to 84 stop-outs). Limiting how many re-entries or how many weeks a campaign may run is the obvious refinement.
+
+**Every campaign (restart each January; prices are NQ-equivalent):**
+
+| # | Wave: high -> low | Pullback | Entry (70% level) | Started | Ended | Outcome | Units bought / stopped | Max contracts | P&L |
+|---:|---|---:|---:|---|---|---|---:|---:|---:|
+| 1 | 12,961 -> 12,249 | 5.5% | 12,747 | 2023-02-15 | 2023-02-21 | cancelled (new low) | 1 / 1 | 1 | -$3k |
+| 2 | 12,961 -> 11,671 | 9.9% | 12,574 | 2023-03-16 | 2023-05-26 | +12% target | 32 / 20 | 12 | +$136k |
+| 3 | 15,707 -> 14,242 | 9.3% | 15,268 | 2023-09-01 | 2023-09-25 | cancelled (new low) | 1 / 1 | 1 | -$3k |
+| 4 | 15,707 -> 13,585 | 13.5% | 15,071 | 2023-11-14 | 2023-12-29 | closed at year end | 14 / 6 | 9 | +$81k |
+| 5 | 18,466 -> 16,883 | 8.6% | 17,991 | 2024-05-07 | 2024-07-05 | +12% target | 21 / 9 | 12 | +$238k |
+| 6 | 20,496 -> 16,873 | 17.7% | 19,409 | 2024-08-19 | 2024-12-31 | closed at year end | 46 / 40 | 11 | -$111k |
+| 7 | 21,873 -> 20,672 | 5.5% | 21,513 | 2025-01-16 | 2025-02-27 | cancelled (new low) | 18 / 18 | 4 | -$92k |
+| 8 | 22,304 -> 16,216 | 27.3% | 20,478 | 2025-05-12 | 2025-07-25 | +12% target | 33 / 21 | 12 | +$219k |
+| 9 | 25,660 -> 23,149 | 9.8% | 24,906 | 2025-12-02 | 2025-12-31 | closed at year end | 4 / 4 | 1 | -$20k |
+| 10 | 26,343 -> 22,724 | 13.7% | 25,257 | 2026-04-13 | 2026-05-06 | +12% target | 15 / 3 | 12 | +$366k |
+| 11 | 30,579 -> 28,013 | 8.4% | 29,809 | 2026-06-14 | 2026-07-17 | cancelled (new low) | 7 / 7 | 3 | -$42k |
+| 12 | 30,579 -> 26,684 | 12.7% | 29,411 | 2026-08-04 | 2026-11-02 | open at end | 13 / 13 | 5 | -$78k |
+
+**Sensitivity (one setting changed at a time; restart each January unless stated):**
+
+| Setting | Value | 2022 | 2023 | 2024 | 2025 | 2026 YTD | 5-yr total | Worst drawdown | Run straight through: total | Max contracts |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Pullback that arms a wave | 3% | $0 | +$235k | -$100k | -$49k | +$145k | +$231k | -$531k | -$218k | 12 |
+| Pullback that arms a wave | **5%** | $0 | +$211k | +$127k | +$108k | +$246k | **+$692k** | -$374k | +$434k | 12 |
+| Pullback that arms a wave | 8% | $0 | +$214k | +$127k | +$199k | +$246k | +$787k | -$282k | +$434k | 12 |
+| Pullback that arms a wave | 10% | $0 | +$81k | -$111k | +$219k | +$288k | +$478k | -$282k | +$294k | 12 |
+| Entry retracement | 50% | -$39k | +$247k | +$386k | +$78k | +$1k | +$673k | -$363k | +$706k | 12 |
+| Entry retracement | 61.8% | -$9k | +$239k | +$395k | +$90k | +$154k | +$869k | -$238k | +$629k | 12 |
+| Entry retracement | **70%** | $0 | +$211k | +$127k | +$108k | +$246k | **+$692k** | -$374k | +$434k | 12 |
+| Entry retracement | 80% | $0 | +$193k | +$139k | +$82k | +$298k | +$712k | -$344k | +$621k | 12 |
+| Take profit (reset) | 8% | $0 | +$131k | +$142k | -$44k | +$53k | +$283k | -$144k | +$211k | 8 |
+| Take profit (reset) | **12%** | $0 | +$211k | +$127k | +$108k | +$246k | **+$692k** | -$374k | +$434k | 12 |
+| Take profit (reset) | 16% | $0 | +$337k | -$245k | +$265k | +$516k | +$873k | -$702k | +$603k | 15 |
+| Take profit (reset) | 20% | $0 | +$509k | -$245k | +$527k | +$833k | +$1.62M | -$702k | +$1.41M | 19 |
+| Take profit (reset) | none | $0 | +$744k | -$245k | +$289k | -$446k | +$342k | -$1.51M | +$2.49M | 27 |
+
+Files: `results/recovery/` (campaign logs, trade logs, yearly summary, hourly equity, sensitivity). Code: `src/recovery_backtest.py` (rules and fills, with self-tests) and `src/run_recovery.py`.
 
 ## Variants (same data, same costs)
 
@@ -206,10 +293,14 @@ python3 src/theory_check.py --results results && python3 src/history_estimate.py
 ```
 
 ```bash
+python3 src/run_recovery.py --cfd data/dukascopy/USATECHIDXUSD_1min_mid.csv.gz --yahoo data/yahoo --out results
+```
+
+```bash
 python3 src/make_charts.py --results results && python3 src/report_tables.py --results results
 ```
 
-The Dukascopy download (about 3,500 small files) throttles. The script retries and resumes from its cache. The engine self-test runs with `python3 src/pyramid_backtest.py`.
+The Dukascopy download (about 3,500 small files) throttles. The script retries and resumes from its cache. The engine self-tests run with `python3 src/pyramid_backtest.py` and `python3 src/recovery_backtest.py`.
 
 ## Files
 
@@ -220,6 +311,7 @@ The Dukascopy download (about 3,500 small files) throttles. The script retries a
 | `src/run_backtests.py` | Runs every year and variant, plus the step/stop and cap sensitivity grids |
 | `src/theory_check.py` | Closed-form prediction versus backtest |
 | `src/history_estimate.py` | 1986 to 2025 model estimate from daily data |
+| `src/recovery_backtest.py`, `src/run_recovery.py` | Recovery-entry version: rules, fills, self-tests; runner and sensitivity |
 | `src/make_charts.py`, `src/report_tables.py` | Charts and README tables |
 | `src/fetch_dukascopy.py`, `src/build_bars.py`, `src/fetch_yahoo.py` | Data download and decoding |
 | `results/` | All CSV outputs, trade logs, hourly equity curves, charts, data validation |

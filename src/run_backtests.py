@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from nq_series import load_cfd, load_yahoo, build_year, cfd_at_close, ET  # noqa: E402
+from nq_series import (load_inputs, build_year_calibrated, rolled_nq_points,  # noqa: E402
+                       cfd_at_close, ET)
 from pyramid_backtest import Config, run  # noqa: E402
 
 YEARS = [2022, 2023, 2024, 2025, 2026]
@@ -52,13 +53,7 @@ def main():
     os.makedirs(os.path.join(a.out, "trades"), exist_ok=True)
     os.makedirs(os.path.join(a.out, "equity"), exist_ok=True)
 
-    cfd = load_cfd(a.cfd)
-    ndx = load_yahoo(a.yahoo, "NDX")
-    nqf = load_yahoo(a.yahoo, "NQ_F")
-    irx = load_yahoo(a.yahoo, "IRX")
-    last_ndx = ndx.index[-1]
-    last_cfd_day = cfd.index[-1].tz_convert(ET).normalize().tz_localize(None)
-    last_date = min(last_ndx, last_cfd_day)
+    cfd, ndx, nqf, irx, last_date = load_inputs(a.cfd, a.yahoo)
 
     # ---------------- data validation ----------------
     dates = ndx.index[(ndx.index >= "2022-01-01") & (ndx.index <= last_date)]
@@ -79,29 +74,14 @@ def main():
         f.write(f"* Average daily high-low range: CFD {rng_c.mean():.3f}% vs NQ futures {rng_n.mean():.3f}% "
                 f"(median difference {(rng_c - rng_n).median():+.3f} pp, n={len(j)})\n")
 
-    # real rolled-NQ points per year from Yahoo daily continuous NQ=F (roll jumps removed)
-    m = nqf[["close"]].join(ndx[["close"]], rsuffix="_ndx", how="inner")
-    rn, rx = m.close.pct_change(), m.close_ndx.pct_change()
-    roll = (rn - rx).abs() > 0.004
-    m["pts"] = np.where(roll, rx * m.close.shift(1), m.close.diff())
+    rolled = rolled_nq_points(nqf, ndx)      # real rolled-NQ daily points (Yahoo NQ=F)
     carry_rows = []
 
     rows, meta_rows, sens_rows, cap_rows = [], [], [], []
     for y in YEARS:
-        # calibrate the financing spread so the model's year matches real rolled NQ
-        def c2c(spread):
-            b, mt = build_year(cfd, ndx, nqf, irx, y, last_date=last_date, spread=spread)
-            t_c0 = (pd.Timestamp(mt["first_day"]).tz_localize(ET)
-                    + pd.Timedelta(hours=16)).tz_convert("UTC")
-            return b, mt, b["close"].iloc[-1] - b["close"].loc[:t_c0].iloc[-1]
-        _, meta0, pts0 = c2c(0.0)
-        yr = m[(m.index >= pd.Timestamp(meta0["first_day"])) & (m.index <= pd.Timestamp(meta0["last_day"]))]
-        real_pts = yr.pts.iloc[1:].sum()
-        _, _, pts1 = c2c(0.01)
-        spread = 0.01 * (pts0 - real_pts) / (pts0 - pts1)
-        bars, meta, model_pts = c2c(spread)
-        carry_rows.append((y, real_pts, pts0, model_pts, spread,
-                           yr.close_ndx.iloc[-1] - yr.close_ndx.iloc[0]))
+        # financing spread calibrated so the model's year matches real rolled NQ
+        bars, meta, check = build_year_calibrated(cfd, ndx, nqf, irx, y, last_date, rolled)
+        carry_rows.append(check)
         rv_all, rv_above = realized_var(bars, meta["P0"])
         meta.update(rv_total=rv_all, rv_above_start=rv_above,
                     log_ret=math.log(meta["P_end"] / meta["P0"]))

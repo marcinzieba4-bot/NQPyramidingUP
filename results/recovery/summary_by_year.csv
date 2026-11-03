@@ -1,0 +1,11 @@
+mode,year,pnl_usd,campaigns_started,hit_target,cancelled,stopouts,max_contracts,time_in_market_pct,max_drawdown_usd
+restart,2022,0,0,0,0,0,0,0.0,0
+restart,2023,211392,4,1,2,28,12,32.3,-75376
+restart,2024,127249,2,1,0,49,12,44.5,-246264
+restart,2025,107522,3,1,1,43,12,34.3,-144039
+restart,2026,246121,3,1,1,23,12,22.5,-139176
+continuous,2022,0,0,0,0,0,0,0.0,0
+continuous,2023,30694,1,1,0,28,10,28.7,-101902
+continuous,2024,222138,2,1,1,55,12,49.6,-246264
+continuous,2025,-32248,2,1,1,66,12,43.2,-389700
+continuous,2026,213054,3,1,1,30,12,27.0,-139176

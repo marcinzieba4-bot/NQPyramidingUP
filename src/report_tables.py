@@ -78,6 +78,61 @@ def main():
     for _, x in h.iterrows():
         print(f"| {x.period} | {x.strategy} | {x.years_positive}/{x.years} | {x['median']:+.2f}× | {x['mean']:+.2f}× | "
               f"{x.stdev:.2f}× | {x.mean_over_stdev:.2f} | {x.worst:+.2f}× | {x.best:+.2f}× |")
+    recovery_tables(r)
+
+
+def recovery_tables(r):
+    """Markdown tables for the recovery-entry section of the README."""
+    rd = os.path.join(r, "recovery")
+    if not os.path.exists(os.path.join(rd, "summary_by_year.csv")):
+        return
+    yl = lambda y: f"{y} YTD" if y == 2026 else str(y)
+    sb = pd.read_csv(os.path.join(rd, "summary_by_year.csv"))
+    s = pd.read_csv(os.path.join(r, "summary_all_variants.csv"))
+    D = s[s.key == "D"].set_index("year")
+    R = sb[sb["mode"] == "restart"].set_index("year")
+    C = sb[sb["mode"] == "continuous"].set_index("year")
+    print("\n### recovery main\n")
+    print("| Year | Recovery entries | Campaigns (hit +12% / cancelled) | Stop-outs | Max contracts | Time in market | Worst drawdown |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for y, x in R.iterrows():
+        print(f"| {yl(y)} | **{k(x.pnl_usd)}** | {x.campaigns_started} ({x.hit_target} / {x.cancelled}) | "
+              f"{x.stopouts} | {x.max_contracts} | {x.time_in_market_pct:.0f}% | {k(x.max_drawdown_usd)} |")
+    print(f"| **Total** | **{k(R.pnl_usd.sum())}** | {R.campaigns_started.sum()} ({R.hit_target.sum()} / "
+          f"{R.cancelled.sum()}) | {R.stopouts.sum()} | {R.max_contracts.max()} | | |")
+    print("\n### recovery compare\n")
+    print("| Year | Buy & hold 1 NQ | Pyramid from the January open (D) | **Recovery entries** | Recovery entries, run straight through |")
+    print("|---|---:|---:|---:|---:|")
+    for y in R.index:
+        print(f"| {yl(y)} | {k(D.loc[y, 'buy_hold_1u_usd'])} | {k(D.loc[y, 'total_pnl_usd'])} | "
+              f"**{k(R.loc[y, 'pnl_usd'])}** | {k(C.loc[y, 'pnl_usd'])} |")
+    print(f"| **Total** | **{k(D.buy_hold_1u_usd.sum())}** | **{k(D.total_pnl_usd.sum())}** | "
+          f"**{k(R.pnl_usd.sum())}** | **{k(C.pnl_usd.sum())}** |")
+    sens = pd.read_csv(os.path.join(rd, "sensitivity.csv"))
+    base = sens[(sens.param == "pullback") & (sens.value.astype(str) == "0.05")]
+    for mode in ("restart", "continuous"):
+        b = base[base["mode"] == mode].iloc[0]
+        print(f"<!-- {mode}: worst drawdown {k(b.worst_drawdown)} -->")
+    print("\n### recovery campaigns\n")
+    cp = pd.read_csv(os.path.join(rd, "campaigns_restart.csv"), parse_dates=["start", "end"])
+    print("| # | Wave: high -> low | Pullback | Entry (70% level) | Started | Ended | Outcome | Units bought / stopped | Max contracts | P&L |")
+    print("|---:|---|---:|---:|---|---|---|---:|---:|---:|")
+    for _, c in cp.iterrows():
+        print(f"| {c.id} | {c.wave_high:,.0f} -> {c.wave_low:,.0f} | {c.pullback_pct:.1f}% | {c.start_price:,.0f} | "
+              f"{c.start:%Y-%m-%d} | {c.end:%Y-%m-%d} | {c.outcome} | {c.entries} / {c.stopouts} | {c.max_units} | {k(c.pnl_usd)} |")
+    print("\n### recovery sensitivity\n")
+    lab = {"pullback": "Pullback that arms a wave", "retrace": "Entry retracement",
+           "take_profit": "Take profit (reset)"}
+    print("| Setting | Value | 2022 | 2023 | 2024 | 2025 | 2026 YTD | 5-yr total | Worst drawdown | Run straight through: total | Max contracts |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for (param, value), g in sens.groupby(["param", "value"], sort=False):
+        rr = g[g["mode"] == "restart"].iloc[0]
+        cc = g[g["mode"] == "continuous"].iloc[0]
+        v = "none" if str(value) == "none" else f"{float(value)*100:g}%"
+        isbase = (param, str(value)) in (("pullback", "0.05"), ("retrace", "0.7"), ("take_profit", "0.12"))
+        bb = "**" if isbase else ""
+        print(f"| {lab[param]} | {bb}{v}{bb} | " + " | ".join(k(rr[str(y)]) for y in (2022, 2023, 2024, 2025, 2026)) +
+              f" | {bb}{k(rr.total)}{bb} | {k(rr.worst_drawdown)} | {k(cc.total)} | {rr.max_contracts} |")
 
 
 if __name__ == "__main__":
