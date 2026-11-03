@@ -40,12 +40,12 @@ def chart(sym, interval, start=None, end=None, rng=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
-    ap.add_argument("--start", default="2021-12-01")
+    ap.add_argument("--start", default="2007-01-01")
     ap.add_argument("--end", default=pd.Timestamp.today().strftime("%Y-%m-%d"))
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     end = (pd.Timestamp(a.end) + pd.Timedelta(days=2)).strftime("%Y-%m-%d")
-    for sym, name in [("NQ=F", "NQ_F"), ("^NDX", "NDX"), ("^IRX", "IRX")]:
+    for sym, name in [("NQ=F", "NQ_F"), ("^NDX", "NDX"), ("^IRX", "IRX"), ("^VXN", "VXN")]:
         df = chart(sym, "1d", a.start, end)
         df.to_csv(os.path.join(a.out, f"{name}_1d.csv"), index=False)
         print(name, "1d", len(df), df.ts.iloc[0].date(), df.ts.iloc[-1].date())

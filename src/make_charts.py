@@ -168,6 +168,73 @@ def recovery_chart(res, out):
     plt.close(fig)
 
 
+def long_charts(res, out):
+    ld = os.path.join(res, "long")
+    s = pd.read_csv(os.path.join(ld, "summary_by_year.csv")).set_index("year")
+    eq = pd.read_csv(os.path.join(ld, "equity_daily.csv"), index_col=0, parse_dates=True)
+    cp = pd.read_csv(os.path.join(ld, "campaigns_restart.csv"), parse_dates=["start", "end"])
+    # yearly bars
+    fig, ax = plt.subplots(figsize=(12, 5.2), dpi=150)
+    yrs = list(s.index)
+    w = 0.27
+    series = [("recovery_usd", COL["D"], "Recovery entries (5% pullback, 70% entry, +12% reset)"),
+              ("D_usd", COL["B"], "D  pyramid from the January open"),
+              ("buy_hold_usd", COL["BH"], "Buy & hold 1 contract")]
+    for j, (col, color, lab) in enumerate(series):
+        ax.bar([i + (j - 1) * (w + 0.02) for i in range(len(yrs))], s[col].values, width=w,
+               color=color, label=lab, zorder=3)
+    ax.axhline(0, color=AXIS, lw=1, zorder=2)
+    ax.set_xticks(range(len(yrs)))
+    ax.set_xticklabels([f"{y}" if y < 2026 else "2026\nYTD" for y in yrs], fontsize=8.5, color=INK2)
+    ax.yaxis.set_major_formatter(mt.FuncFormatter(usd_axis))
+    ax.grid(axis="x", visible=False)
+    ax.set_title("Net P&L per year 2008-2026, 1 unit = 1 NQ contract  (MNQ: divide by 10)")
+    lo, hi = ax.get_ylim()
+    ax.set_ylim(lo, hi + (hi - lo) * 0.18)
+    ax.legend(frameon=False, loc="upper left", ncol=2, fontsize=8.5)
+    fig.text(0.01, 0.01, "2008-2010 simulated on hourly NQ bars; 2011-2026 on 1-minute bars. "
+             "Each year starts fresh in January.", fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.savefig(os.path.join(out, "long_pnl_by_year.png"))
+    plt.close(fig)
+    # cumulative
+    fig, axs = plt.subplots(2, 1, figsize=(12, 7.6), dpi=150, sharex=True,
+                            gridspec_kw={"height_ratios": [1.0, 1.25]})
+    ax = axs[0]
+    ax.plot(eq.index, eq.nq_level, color=INK2, lw=0.9, zorder=3)
+    ax.set_yscale("log")
+    ax.yaxis.set_major_formatter(mt.StrMethodFormatter("{x:,.0f}"))
+    ax.yaxis.set_minor_formatter(mt.NullFormatter())
+    seen = set()
+    for _, c in cp.iterrows():
+        col, lab = OUTCOME.get(c.outcome, ("#898781", "closed at year end / still open"))
+        if c.outcome.startswith("abandoned"):
+            col, lab = "#898781", "closed at year end / still open"
+        ax.axvspan(c.start, c.end, color=col, alpha=0.18, lw=0, label=None if lab in seen else lab, zorder=1)
+        seen.add(lab)
+    ax.set_title("NQ (log scale) with each recovery campaign shaded")
+    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    ax = axs[1]
+    lines = [("D", COL["B"], "D  pyramid from the January open"),
+             ("recovery + sell 20-delta 7-day calls", COL["E"], "Recovery entries + sell 20-delta 7-day calls"),
+             ("recovery", COL["D"], "Recovery entries"),
+             ("buy_hold", COL["BH"], "Buy & hold 1 contract")]
+    for col, color, lab in lines:            # final value in the legend (end labels would collide)
+        if col in eq:
+            v = eq[col].dropna()
+            ax.plot(v.index, v.values, color=color, lw=1.5, label=f"{lab}:  {usd(v.iloc[-1])}")
+    ax.axhline(0, color=AXIS, lw=1)
+    ax.set_title("Cumulative P&L since Jan 2008, 1 unit = 1 NQ contract")
+    ax.yaxis.set_major_formatter(mt.FuncFormatter(usd_axis))
+    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    axs[0].yaxis.set_major_locator(mt.LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
+    span = eq.index[-1] - eq.index[0]
+    axs[1].set_xlim(eq.index[0] - span * 0.01, eq.index[-1] + span * 0.01)
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "long_2008_2026.png"))
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default="results")
@@ -179,4 +246,6 @@ if __name__ == "__main__":
         anatomy(a.results, out, y)
     if os.path.exists(os.path.join(a.results, "recovery", "campaigns_restart.csv")):
         recovery_chart(a.results, out)
+    if os.path.exists(os.path.join(a.results, "long", "equity_daily.csv")):
+        long_charts(a.results, out)
     print("charts written to", out)

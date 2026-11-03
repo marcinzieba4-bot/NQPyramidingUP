@@ -7,7 +7,7 @@ import pandas as pd
 
 def k(x):
     a = abs(x)
-    s = f"${a/1e6:.2f}M" if a >= 1e6 else f"${a/1e3:.0f}k"
+    s = f"${a/1e6:.2f}M" if a >= 1e6 else (f"${a/1e3:.0f}k" if a >= 999.5 else f"${a:.0f}")
     return ("-" if x < 0 else "+") + s if x else "$0"
 
 
@@ -79,6 +79,7 @@ def main():
         print(f"| {x.period} | {x.strategy} | {x.years_positive}/{x.years} | {x['median']:+.2f}× | {x['mean']:+.2f}× | "
               f"{x.stdev:.2f}× | {x.mean_over_stdev:.2f} | {x.worst:+.2f}× | {x.best:+.2f}× |")
     recovery_tables(r)
+    long_tables(r)
 
 
 def recovery_tables(r):
@@ -133,6 +134,87 @@ def recovery_tables(r):
         bb = "**" if isbase else ""
         print(f"| {lab[param]} | {bb}{v}{bb} | " + " | ".join(k(rr[str(y)]) for y in (2022, 2023, 2024, 2025, 2026)) +
               f" | {bb}{k(rr.total)}{bb} | {k(rr.worst_drawdown)} | {k(cc.total)} | {rr.max_contracts} |")
+
+
+
+def long_tables(r):
+    """Markdown tables for the 2008-2026 section."""
+    ld = os.path.join(r, "long")
+    if not os.path.exists(os.path.join(ld, "variants.csv")):
+        return
+    yl = lambda y: f"{y} YTD" if int(y) == 2026 else str(y)
+    sm = pd.read_csv(os.path.join(ld, "summary_by_year.csv")).set_index("year")
+    ds = pd.read_csv(os.path.join(ld, "data_sources.csv")).set_index("year")
+    cc = pd.read_csv(os.path.join(ld, "covered_calls.csv"))
+    notional = ds.P0 * 20.0
+    src = {"hourly NQ (HF)": "hourly", "HistData 1-min": "1-min", "Dukascopy 1-min": "1-min"}
+    print("\n### long by year\n")
+    print("| Year | NQ move | Bars | Buy & hold | Pyramid from January (D) | **Recovery entries** | Recovery, x one contract's January value | Campaigns (hit +12% / cancelled) | Max contracts |")
+    print("|---|---:|---|---:|---:|---:|---:|---:|---:|")
+    for y, x in sm.iterrows():
+        print(f"| {yl(y)} | {x.nq_move_pct:+.0f}% | {src[x.source]} | {k(x.buy_hold_usd)} | {k(x.D_usd)} | **{k(x.recovery_usd)}** | "
+              f"{x.recovery_usd / notional[y]:+.2f}x | {int(x.campaigns_started)} ({int(x.hit_target)} / {int(x.cancelled)}) | {int(x.max_contracts)} |")
+    print(f"| **Total** | | | **{k(sm.buy_hold_usd.sum())}** | **{k(sm.D_usd.sum())}** | **{k(sm.recovery_usd.sum())}** | | "
+          f"{int(sm.campaigns_started.sum())} ({int(sm.hit_target.sum())} / {int(sm.cancelled.sum())}) | |")
+    # summary statistics in units of one contract's January value
+    years = [str(y) for y in sm.index]
+    def series_from_calls(strategy, overlay):
+        row = cc[(cc.strategy == strategy) & (cc.overlay == overlay)].iloc[0]
+        return pd.Series({int(y): row[y] for y in years}), row.worst_drawdown
+    rec_dd = cc[(cc.strategy == "recovery") & (cc.overlay == "no calls")].iloc[0].worst_drawdown
+    d_dd = cc[(cc.strategy.str.startswith("D")) & (cc.overlay == "no calls")].iloc[0].worst_drawdown
+    rows = [("Buy & hold 1 contract", sm.buy_hold_usd, None),
+            ("Pyramid from January (D)", sm.D_usd, d_dd),
+            ("Recovery entries", sm.recovery_usd, rec_dd),
+            ("Recovery entries, run straight through", sm.recovery_straight_through_usd, None)]
+    for ov in ("sell 20-delta 7-day calls", "sell ATM 30-day calls"):
+        s_, dd = series_from_calls("recovery", ov)
+        rows.append((f"Recovery entries + {ov}", s_, dd))
+    print("\n### long stats\n")
+    print("| Strategy | 2008-2026 total | Winning years | Worst year | Best year | Average year | Average / std. dev. | Worst drawdown |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|")
+    for name, ser, dd in rows:
+        x = ser / notional
+        full = x[x.index < 2026]
+        print(f"| {name} | {k(ser.sum())} | {int((ser > 0).sum())} of {len(ser)} | {x.min():+.2f}x | {x.max():+.2f}x | "
+              f"{x.mean():+.2f}x | {x.mean() / x.std():.2f} | {'' if dd is None else k(dd)} |")
+    print("\n### long variants\n")
+    v = pd.read_csv(os.path.join(ld, "variants.csv"))
+    print("| Variant | 2008-2026 total | Losing years | Worst year | Worst drawdown | Campaigns (hit +12%) | Stop-outs | Max contracts |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|")
+    for _, x in v.iterrows():
+        b = "**" if x.variant.startswith("base") else ""
+        print(f"| {b}{x.variant}{b} | {b}{k(x.total)}{b} | {x.losing_years} | {k(x.worst_year)} | {k(x.worst_drawdown)} | "
+              f"{x.campaigns} ({x.hit_target}) | {x.stopouts} | {x.max_contracts} |")
+    print("\n### long calls\n")
+    print("| Overlay | Recovery entries: total | change | worst drawdown | Pyramid from January (D): total | change | worst drawdown |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    rec0 = cc[(cc.strategy == "recovery") & (cc.overlay == "no calls")].iloc[0].total
+    d0 = cc[(cc.strategy.str.startswith("D")) & (cc.overlay == "no calls")].iloc[0].total
+    for ov in ("no calls", "sell ATM 30-day calls", "sell 20-delta 30-day calls", "sell ATM 7-day calls", "sell 20-delta 7-day calls"):
+        a_ = cc[(cc.strategy == "recovery") & (cc.overlay == ov)].iloc[0]
+        b_ = cc[(cc.strategy.str.startswith("D")) & (cc.overlay == ov)].iloc[0]
+        ch = lambda t, t0: "" if ov == "no calls" else k(t - t0)
+        print(f"| {ov} | {k(a_.total)} | {ch(a_.total, rec0)} | {k(a_.worst_drawdown)} | {k(b_.total)} | {ch(b_.total, d0)} | {k(b_.worst_drawdown)} |")
+    sp = os.path.join(ld, "covered_calls_sensitivity.csv")
+    if os.path.exists(sp):
+        cs = pd.read_csv(sp)
+        print("\n### long calls sensitivity\n")
+        print("| Calls sold | ATM vol 0.8 x VXN | 0.9 x VXN (base) | 1.0 x VXN | Flatter skew | Steeper skew | 3% spread cost |")
+        print("|---|---:|---:|---:|---:|---:|---:|")
+        for calls, g in cs.groupby("calls", sort=False):
+            def val(ratio, skew, cost):
+                m = g[(g["atm_vol_as_share_of_vxn"] == ratio) & (g["skew"] == skew) & (g["spread_cost_share"] == cost)]
+                return k(m.option_pnl_usd.iloc[0])
+            print(f"| {calls} | {val(0.8, 0.6, 0.01)} | {val(0.9, 0.6, 0.01)} | {val(1.0, 0.6, 0.01)} | "
+                  f"{val(0.9, 0.3, 0.01)} | {val(0.9, 1.0, 0.01)} | {val(0.9, 0.6, 0.03)} |")
+    hv = pd.read_csv(os.path.join(ld, "hourly_vs_minute.csv"))
+    print("\n### long hourly check\n")
+    print("| Year | Recovery, 1-min bars | Recovery, hourly bars | Pyramid from January, 1-min | Pyramid from January, hourly |")
+    print("|---|---:|---:|---:|---:|")
+    for _, x in hv.iterrows():
+        print(f"| {x.year} | {k(x.recovery_1min)} | {k(x.recovery_hourly)} | {k(x.D_1min)} | {k(x.D_hourly)} |")
+    print(f"| **2011-2022** | **{k(hv.recovery_1min.sum())}** | **{k(hv.recovery_hourly.sum())}** | **{k(hv.D_1min.sum())}** | **{k(hv.D_hourly.sum())}** |")
 
 
 if __name__ == "__main__":

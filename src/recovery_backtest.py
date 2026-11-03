@@ -42,6 +42,9 @@ class RecoveryConfig:
     slippage: float = 0.5             # NQ points per side on stop / market fills
     commission: float = 2.50          # USD per contract per side
     point_value: float = 20.0         # NQ = $20/pt (MNQ = $2/pt)
+    max_units: int | None = None      # optional cap on contracts held at once
+    max_stopouts: int | None = None   # optional: abandon a campaign after this many stop-outs
+    max_days: float | None = None     # optional: abandon a campaign after this many days
 
     def label(self):
         tp = "none" if self.take_profit is None else f"{self.take_profit*100:g}%"
@@ -125,9 +128,10 @@ class RecoveryPyramid:
     def _buy_levels(self, a, top, ts, gap, gap_px):
         """buy every free level k >= 0 with a < L_k <= top (and below the target)."""
         tgt = self.target()
+        cap = self.cfg.max_units
         for k in range(max(self.kidx(a) + 1, 0), self.kidx(top) + 1):
             lv = self.lvl(k)
-            if lv >= tgt:
+            if lv >= tgt or (cap is not None and self.n_units >= cap):
                 break
             if k not in self.units:
                 self._buy(k, (gap_px if gap else lv) + self.cfg.slippage, ts)
@@ -193,8 +197,20 @@ class RecoveryPyramid:
             self._end(ts, "cancelled (new low)")
             self.state = ARMED
             self.L = b
+        elif self.cfg.max_stopouts is not None and self.camp["stopouts"] >= self.cfg.max_stopouts:
+            self._abandon(b, ts, "abandoned (stop-out limit)")
+
+    def _abandon(self, price, ts, outcome):
+        """give up on the campaign: sell what is left, wait for a fresh 5% pullback."""
+        self._close_all(price - self.cfg.slippage, ts, "abandon")
+        self._end(ts, outcome)
+        self.state = SEEK
+        self.H = price
 
     def bar(self, ts, o, h, l, c):
+        if (self.camp is not None and self.cfg.max_days is not None
+                and (ts - self.camp["start"]).total_seconds() > self.cfg.max_days * 86400):
+            self._abandon(o, ts, "abandoned (time stop)")
         if o != self.prev:                               # gap / bar-to-bar jump
             if o > self.prev:
                 self._up(self.prev, o, ts, True)
@@ -316,4 +332,13 @@ if __name__ == "__main__":
     # 3) a 4.8% dip never arms a wave
     r = run_segments([bars([(100, 104, 96, 104), (104, 104, 99, 99)])], RecoveryConfig(**z))
     assert r["campaigns"].empty and r["trades"].empty
+    # 4) stop-out limit: after 1 stop-out the campaign is abandoned (no re-entry at 98.2)
+    r = run_segments([bars([(100, 100, 100, 100), (100, 100, 94, 94), (94, 99, 94, 99),
+                            (99, 99, 96, 96), (96, 99, 96, 99)])], RecoveryConfig(max_stopouts=1, **z))
+    assert list(r["campaigns"].outcome) == ["abandoned (stop-out limit)"], r["campaigns"]
+    assert len(r["trades"]) == 1
+    # 5) unit cap: only 3 contracts even though price runs to the target
+    r = run_segments([bars([(100, 100, 100, 100), (100, 100, 94, 94), (94, 110, 94, 110)])],
+                     RecoveryConfig(max_units=3, **z))
+    assert r["campaigns"].iloc[0].max_units == 3
     print("self-checks passed")
