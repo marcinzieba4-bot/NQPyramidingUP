@@ -112,7 +112,8 @@ class RecoveryPyramid:
         pv, comm = self.pv, self.comm
         self.cash += (fill - u["basis"]) * pv - comm
         pnl = u["banked"] + (fill - u["basis"]) * pv - 2 * comm
-        self.trades.append((self.camp["id"], k, u["ets"], u["entry"], ts, fill, pnl, reason))
+        self.trades.append((self.camp["id"], k, u["ets"], u["entry"], ts, fill, pnl, reason,
+                            self.pv / self.cfg.point_value))     # NQ contracts per unit
         if reason == "stop":
             self.camp["stopouts"] += 1
 
@@ -312,7 +313,7 @@ def run_segments(segments, cfg: RecoveryConfig, ratios=None):
     trades += eng.trades
     camps += eng.campaigns
     tr = pd.DataFrame(trades, columns=["campaign", "level", "entry_time", "entry", "exit_time",
-                                       "exit", "pnl_usd", "reason"])
+                                       "exit", "pnl_usd", "reason", "contracts"])
     cp = pd.DataFrame(camps)
     if len(cp):
         cp["id"] = range(1, len(cp) + 1)

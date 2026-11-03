@@ -83,6 +83,7 @@ def main():
     breakout_tables(r)
     variant_tables(r, "recovery30")
     sizing_tables(r)
+    best_calls_tables(r)
 
 
 def recovery_tables(r):
@@ -355,6 +356,44 @@ def sizing_tables(r):
         dd = -x.max_drawdown * f
         print(f"| {name} | -${dd/1e3:,.0f}k | {int(x.max_units)} | ${2*dd/1e3:,.0f}k | ${3*dd/1e3:,.0f}k | "
               f"+${x.avg_per_year*f/1e3:,.0f}k | {x.avg_per_year*f/(3*dd)*100:.0f}% |")
+
+
+
+def best_calls_tables(r):
+    bd = os.path.join(r, "best_calls")
+    if not os.path.exists(os.path.join(bd, "summary.csv")):
+        return
+    sm = pd.read_csv(os.path.join(bd, "summary.csv"))
+    by = pd.read_csv(os.path.join(bd, "by_year.csv")).set_index("year")
+    meta = pd.read_csv(os.path.join(r, "sizing", "meta.csv")).iloc[0]
+    print("\n### best calls summary\n")
+    print("| Version (per $100k unit) | Calls priced at | Average profit per year | Option P&L, 2008-2026 (after costs) | Worst drawdown | When | Calmar | Yearly avg / std. dev. |")
+    print("|---|---:|---:|---:|---:|---|---:|---:|")
+    for _, x in sm.iterrows():
+        when = f"{pd.Timestamp(x.dd_peak):%b %Y} – {pd.Timestamp(x.dd_trough):%b %Y}"
+        vol = "" if pd.isna(x.vol_vs_vxn) else f"{x.vol_vs_vxn:.1f} x VXN" + (" (base)" if abs(x.vol_vs_vxn - 0.9) < 1e-9 else "")
+        b = "**" if (x.overlay == "no calls" or abs((x.vol_vs_vxn if not pd.isna(x.vol_vs_vxn) else 0) - 0.9) < 1e-9) else ""
+        name = "No calls" if x.overlay == "no calls" else x.overlay[0].upper() + x.overlay[1:]
+        print(f"| {name} | {vol} | {k(x.avg_per_year)} | {'' if x.overlay == 'no calls' else k(x.option_pnl)} | "
+              f"{k(x.max_drawdown)} | {when} | {b}{x.calmar:.2f}{b} | {x.yearly_mean_over_std:.2f} |")
+    print("\n### best calls by year\n")
+    print("| Year | No calls | + 20-delta 30-day calls | + 20-delta 7-day calls | 7-day calls added |")
+    print("|---|---:|---:|---:|---:|")
+    for y, x in by.iterrows():
+        d7 = x["sell 20-delta 7-day calls"] - x["no calls"]
+        print(f"| {y if y != 2026 else '2026 YTD'} | {k(x['no calls'])} | {k(x['sell 20-delta 30-day calls'])} | "
+              f"{k(x['sell 20-delta 7-day calls'])} | {k(d7)} |")
+    f = meta.mnq_notional_usd / meta.unit_usd
+    print("\n### best calls capital\n")
+    print("| Version, 1 unit = 1 MNQ | Worst drawdown | Account if worst drawdown = 50% | Account if = 33% | Average profit per year | Yearly return on the 33% account |")
+    print("|---|---:|---:|---:|---:|---:|")
+    for key, name in (("no calls", "No calls"), ("sell 20-delta 30-day calls @ 0.9 x VXN", "+ 20-delta 30-day calls"),
+                      ("sell 20-delta 7-day calls @ 0.9 x VXN", "+ 20-delta 7-day calls"),
+                      ("sell 20-delta 7-day calls @ 0.8 x VXN", "+ 20-delta 7-day calls, priced 0.8 x VXN")):
+        x = sm[sm.version == key].iloc[0]
+        dd = -x.max_drawdown * f
+        print(f"| {name} | -${dd/1e3:,.0f}k | ${2*dd/1e3:,.0f}k | ${3*dd/1e3:,.0f}k | +${x.avg_per_year*f/1e3:,.0f}k | "
+              f"{x.avg_per_year*f/(3*dd)*100:.0f}% |")
 
 
 if __name__ == "__main__":

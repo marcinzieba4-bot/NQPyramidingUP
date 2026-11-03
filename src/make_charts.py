@@ -322,6 +322,44 @@ def sizing_chart(res, out):
     plt.close(fig)
 
 
+def best_calls_chart(res, out):
+    bd = os.path.join(res, "best_calls")
+    eq = pd.read_csv(os.path.join(bd, "equity_daily.csv"), index_col=0, parse_dates=True)
+    sz = pd.read_csv(os.path.join(res, "sizing", "equity_daily_100k_per_unit.csv"), index_col=0, parse_dates=True)
+    sm = pd.read_csv(os.path.join(bd, "summary.csv")).set_index("version")
+    esc = lambda t: t.replace("$", r"\$")
+    lines = [("sell 20-delta 7-day calls", COL["E"], "Recovery 70% / +20% + sell 20-delta 7-day calls",
+              "sell 20-delta 7-day calls @ 0.9 x VXN"),
+             ("sell 20-delta 30-day calls", "#eda100", "Recovery 70% / +20% + sell 20-delta 30-day calls",
+              "sell 20-delta 30-day calls @ 0.9 x VXN"),
+             ("no calls", COL["D"], "Recovery 70% / +20%, no calls", "no calls")]
+    fig, axs = plt.subplots(2, 1, figsize=(11, 8.0), dpi=150, sharex=True,
+                            gridspec_kw={"height_ratios": [1.3, 1.0]})
+    for col, color, lab, key in lines:
+        v = eq[col].dropna()
+        axs[0].plot(v.index, v.values, color=color, lw=1.5,
+                    label=esc(f"{lab}:  {usd(v.iloc[-1])}, Calmar {sm.loc[key, 'calmar']:.2f}"))
+        dd = v - v.cummax()
+        axs[1].plot(dd.index, dd.values, color=color, lw=1.3,
+                    label=esc(f"{lab}: worst {usd(sm.loc[key, 'max_drawdown'])}"))
+    bh = sz["Buy & hold ($100k each January)"].dropna()
+    bh_calmar = pd.read_csv(os.path.join(res, "sizing", "calmar_100k_per_unit.csv")).set_index("version").loc[
+        "Buy & hold ($100k each January)", "calmar"]
+    axs[0].plot(bh.index, bh.values, color=COL["BH"], lw=1.3,
+                label=esc(f"Buy & hold:  {usd(bh.iloc[-1])}, Calmar {bh_calmar:.2f}"))
+    for ax in axs:
+        ax.axhline(0, color=AXIS, lw=1)
+        ax.yaxis.set_major_formatter(mt.FuncFormatter(lambda x, _: esc(usd_axis(x))))
+        ax.legend(frameon=False, fontsize=8.5, loc="upper left" if ax is axs[0] else "lower left")
+    axs[0].set_title(esc("Cumulative P&L per $100k unit, no reinvestment (calls priced at 0.9 x VXN)"))
+    axs[1].set_title(esc("Drawdown from the previous peak, per $100k unit (daily closes; worst value from 1-minute data)"))
+    fig.text(0.01, 0.01, esc("1 call sold per contract held; Black-76 from VXN with skew; option P&L booked when each "
+             "contract is closed. Weekly NQ options did not exist before ~2013."), fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.savefig(os.path.join(out, "best_calls_100k_per_unit.png"))
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default="results")
@@ -341,4 +379,6 @@ if __name__ == "__main__":
         variant_chart(a.results, "recovery30", "Recovery entries at 30%", out)
     if os.path.exists(os.path.join(a.results, "sizing", "equity_daily_100k_per_unit.csv")):
         sizing_chart(a.results, out)
+    if os.path.exists(os.path.join(a.results, "best_calls", "equity_daily.csv")):
+        best_calls_chart(a.results, out)
     print("charts written to", out)

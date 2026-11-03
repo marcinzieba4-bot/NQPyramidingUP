@@ -179,7 +179,7 @@ def run_breakout(segments, refs_by_year, cfg: BreakoutConfig, ratios=None):
     trades += eng.trades
     camps += eng.campaigns
     tr = pd.DataFrame(trades, columns=["campaign", "level", "entry_time", "entry", "exit_time",
-                                       "exit", "pnl_usd", "reason"])
+                                       "exit", "pnl_usd", "reason", "contracts"])
     cp = pd.DataFrame(camps)
     if len(cp):
         cp["id"] = range(1, len(cp) + 1)

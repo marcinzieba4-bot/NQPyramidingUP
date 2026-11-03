@@ -4,7 +4,7 @@
 
 All dollar figures are for **1 unit = 1 NQ contract ($20 per point)**. **For MNQ, divide every dollar figure by 10.** Figures are net of costs (0.5 pt slippage plus $2.50 commission per contract per side). The 2026 run stops at the **November 2, 2026** close (year to date).
 
-**Start here:** [Which version is best? Sized properly](#which-version-is-best-sized-properly-100k-per-unit-no-reinvestment) compares every version at a constant $100k per unit (Calmar ratio and the account size you need).
+**Start here:** [Which version is best? Sized properly](#which-version-is-best-sized-properly-100k-per-unit-no-reinvestment) compares every version at a constant $100k per unit (Calmar ratio and the account size you need). The chosen version with 20-delta calls is in [The chosen version with 20-delta calls](#the-chosen-version-with-20-delta-calls-sized-at-100k-per-unit).
 
 **Also:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls). A breakout version (beat the 1-year high after a 3% pullback, +5% target, 0.5% steps) is in [Breakout entries](#breakout-entries-beating-the-1-year-high-after-a-3-pullback). Entering at 30% of the rebound, with 20-delta calls, is in [Recovery entries at 30%](#recovery-entries-at-30-of-the-rebound-with-20-delta-calls).
 
@@ -93,6 +93,77 @@ All dollar figures are for **1 unit = 1 NQ contract ($20 per point)**. **For MNQ
 - **Plan for worse than history.** Calmar rests on a single worst event, and the next one can be bigger. A common rule is to size for 1.5–2 times the historical worst drawdown.
 
 Files: `results/sizing/` (ranking with per-year results, daily equity per $100k unit, current MNQ value). Code: `src/run_sizing.py`; all engines take a `unit_notional` setting.
+
+## The chosen version with 20-delta calls (sized at $100k per unit)
+
+**Setup.**
+- **Strategy:** the pick from the section above, recovery with a 70% entry and a +20% reset (5% pullback, 1% step and 1% stop).
+- **Sizing:** $100k of NQ per unit at the start of each campaign, never reinvested.
+- **Calls:** sell 1 call per contract held, at 20 delta with 30 or 7 days to expiry. Sell it when the contract is bought, buy it back when the contract is sold, and roll it if it expires first. Option spreads and commissions are included.
+- **Pricing:** there is no free NQ option history, so calls are priced with Black-76 from VXN (Nasdaq-100 implied volatility) plus a skew. The test is run at three price levels: 0.8, 0.9 (base) and 1.0 × VXN.
+
+| Version (per $100k unit) | Calls priced at | Average profit per year | Option P&L, 2008-2026 (after costs) | Worst drawdown | When | Calmar | Yearly avg / std. dev. |
+|---|---:|---:|---:|---:|---|---:|---:|
+| No calls |  | +$59k |  | -$217k | Aug 2018 – Oct 2019 | **0.27** | 0.52 |
+| Sell 20-delta 30-day calls | 0.8 x VXN | +$44k | -$277k | -$189k | Sep 2020 – Nov 2020 | 0.23 | 0.49 |
+| Sell 20-delta 30-day calls | 0.9 x VXN (base) | +$55k | -$66k | -$186k | Sep 2020 – Nov 2020 | **0.30** | 0.58 |
+| Sell 20-delta 30-day calls | 1.0 x VXN | +$65k | +$122k | -$183k | Sep 2020 – Nov 2020 | 0.36 | 0.64 |
+| Sell 20-delta 7-day calls | 0.8 x VXN | +$57k | -$29k | -$199k | Jul 2024 – Jun 2025 | 0.29 | 0.54 |
+| Sell 20-delta 7-day calls | 0.9 x VXN (base) | +$75k | +$302k | -$183k | Jul 2024 – Jun 2025 | **0.41** | 0.65 |
+| Sell 20-delta 7-day calls | 1.0 x VXN | +$90k | +$593k | -$169k | Jul 2024 – Jun 2025 | 0.53 | 0.73 |
+
+![Chosen version with 20-delta calls](results/charts/best_calls_100k_per_unit.png)
+
+| Year | No calls | + 20-delta 30-day calls | + 20-delta 7-day calls | 7-day calls added |
+|---|---:|---:|---:|---:|
+| 2008 | -$22k | -$17k | -$19k | +$4k |
+| 2009 | +$246k | +$248k | +$290k | +$44k |
+| 2010 | +$180 | +$19k | +$50k | +$49k |
+| 2011 | -$84k | -$62k | -$66k | +$19k |
+| 2012 | -$22k | -$15k | -$15k | +$7k |
+| 2013 | +$175k | +$150k | +$156k | -$19k |
+| 2014 | +$132k | +$92k | +$120k | -$13k |
+| 2015 | -$82k | -$51k | -$73k | +$9k |
+| 2016 | +$37k | +$52k | +$77k | +$40k |
+| 2017 | +$40k | +$41k | +$58k | +$18k |
+| 2018 | -$129k | -$85k | -$97k | +$32k |
+| 2019 | +$59k | +$54k | +$85k | +$26k |
+| 2020 | +$197k | +$215k | +$254k | +$57k |
+| 2021 | +$128k | +$131k | +$188k | +$60k |
+| 2022 | $0 | $0 | $0 | $0 |
+| 2023 | +$197k | +$111k | +$150k | -$48k |
+| 2024 | -$66k | -$64k | -$68k | -$2k |
+| 2025 | +$131k | +$131k | +$174k | +$43k |
+| 2026 YTD | +$168k | +$89k | +$144k | -$24k |
+
+**Account needed at 1 MNQ per unit** (1 MNQ ≈ $56k of NQ today; calls on MNQ options):
+
+| Version, 1 unit = 1 MNQ | Worst drawdown | Account if worst drawdown = 50% | Account if = 33% | Average profit per year | Yearly return on the 33% account |
+|---|---:|---:|---:|---:|---:|
+| No calls | -$122k | $244k | $366k | +$33k | 9% |
+| + 20-delta 30-day calls | -$105k | $209k | $314k | +$31k | 10% |
+| + 20-delta 7-day calls | -$103k | $206k | $310k | +$42k | 14% |
+| + 20-delta 7-day calls, priced 0.8 x VXN | -$112k | $224k | $336k | +$32k | 10% |
+
+**What this means:**
+
+- **Weekly 20-delta calls improved this version** at the base option pricing.
+  - Calmar rose from 0.27 to 0.41, and average profit from +$59k to +$75k a year per $100k unit.
+  - The worst drawdown shrank from -$217k to -$183k.
+  - With cheaper calls (0.8 × VXN), profit is about the same (+$57k), but the smaller drawdown still lifts Calmar slightly (0.29). With richer calls (1.0 × VXN), Calmar reaches 0.53.
+- **Where they help:** in choppy years when the pyramid keeps getting stopped (2018: +$32k, 2011: +$19k) and in steady, grinding rallies (2020–2021: +$57–60k a year). The calls earn their time value and lose value whenever price drops, which offsets part of the stop-outs.
+- **Where they hurt:** in sharp rallies, where they cap the upside: 2013 (-$19k), 2023 (-$48k) and 2026 (-$24k).
+  - At base pricing, the weekly calls added money in 13 of 19 years.
+  - +$179k of their +$302k came in 2013–2026, when weekly options existed; the 2008–2012 part is hypothetical.
+- **Monthly 20-delta calls are a coin flip:** Calmar 0.23 to 0.36 depending on pricing. They gave back $40–87k in strong years (2014, 2023, 2026).
+- **At 1 MNQ per unit, with the weekly calls:**
+  - The account needed for a 33% worst drawdown falls from $366k to $310k.
+  - The yearly return on that account rises from 9% to 14% (10% if calls are priced at 0.8 × VXN).
+- **Caveats.**
+  - These are modelled option prices. Real weekly MNQ option spreads can be wider, so check live quotes before relying on the base case.
+  - It is also operational work: about 240 call sales a year in this test, plus a buy-back at every stop-out.
+
+Files: `results/best_calls/` (summary, per-year results, daily equity, trades with contract sizes). Code: `src/run_best_calls.py`.
 
 ## The answer
 
@@ -697,6 +768,10 @@ python3 src/run_sizing.py --dukascopy data/dukascopy/USATECHIDXUSD_1min_mid.csv.
 ```
 
 ```bash
+python3 src/run_best_calls.py --dukascopy data/dukascopy/USATECHIDXUSD_1min_mid.csv.gz --histdata data/histdata/NSXUSD_1min.csv.gz --hf data/hf_nasdaq60 --yahoo data/yahoo --out results
+```
+
+```bash
 python3 src/make_charts.py --results results && python3 src/report_tables.py --results results
 ```
 
@@ -713,6 +788,7 @@ The Dukascopy download (about 3,500 small files) throttles. The script retries a
 | `src/history_estimate.py` | 1986 to 2025 model estimate from daily data |
 | `src/recovery_backtest.py`, `src/run_recovery.py` | Recovery-entry version: rules, fills, self-tests; runner and sensitivity |
 | `src/long_history.py`, `src/run_long.py` | 2008–2026: stitched yearly NQ series from three sources; recovery strategy, variants, covered calls |
+| `src/run_best_calls.py` | The chosen version at $100k per unit, with 20-delta 30-day / 7-day calls and the option-price stress test |
 | `src/run_sizing.py` | Every version at $100k per unit (no reinvestment): Calmar ranking, drawdowns, daily equity |
 | `src/run_variant.py` | Any recovery setting on 2008–2026 in one command: both modes, neighbours, 20-delta calls with a pricing stress test |
 | `src/breakout_backtest.py`, `src/run_breakout.py` | 1-year-high breakout version: rules (with self-tests), runner, variants and grid |
