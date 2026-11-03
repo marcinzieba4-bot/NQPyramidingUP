@@ -12,10 +12,10 @@ import pandas as pd  # noqa: E402
 
 SURFACE, INK, INK2, MUTED = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS = "#e1e0d9", "#c3c2b7"
-COL = {"A": "#2a78d6", "D": "#eb6834", "B": "#1baf7a", "BH": "#898781"}
-NAME = {"A": "A  as specified (core unit, no stop)",
-        "D": "D  first unit also stopped",
-        "B": "B  add on every +1% at any price",
+COL = {"D": "#2a78d6", "E": "#eb6834", "B": "#1baf7a", "BH": "#898781"}
+NAME = {"D": "D  as specified (every unit stopped 1% below entry)",
+        "E": "E  same, never more than 10 contracts",
+        "B": "B  also re-buys every +1% below the January price",
         "BH": "Buy & hold 1 contract"}
 
 plt.rcParams.update({
@@ -44,14 +44,14 @@ def yearly_bars(res, out):
     d = pd.read_csv(os.path.join(res, "summary_all_variants.csv"))
     years = sorted(d.year.unique())
     piv = d.pivot(index="year", columns="key", values="total_pnl_usd")
-    bh = d[d.key == "A"].set_index("year")["buy_hold_1u_usd"]
-    series = [("A", piv["A"]), ("D", piv["D"]), ("B", piv["B"]), ("BH", bh)]
+    bh = d[d.key == "D"].set_index("year")["buy_hold_1u_usd"]
+    series = [("D", piv["D"]), ("E", piv["E"]), ("B", piv["B"]), ("BH", bh)]
     fig, ax = plt.subplots(figsize=(10, 5.4), dpi=150)
     w = 0.19
     for j, (k, s) in enumerate(series):
         xs = [i + (j - 1.5) * (w + 0.012) for i in range(len(years))]
         ax.bar(xs, s.values, width=w, color=COL[k], label=NAME[k], zorder=3)
-        if k == "A":       # label only the strategy as specified
+        if k == "D":       # label only the strategy as specified
             for x, v in zip(xs, s.values):
                 ax.annotate(usd(v), (x, v), xytext=(0, 4 if v >= 0 else -12),
                             textcoords="offset points", ha="center", fontsize=8.5, color=INK)
@@ -72,7 +72,7 @@ def yearly_bars(res, out):
 
 
 def anatomy(res, out, year):
-    eqA = pd.read_csv(os.path.join(res, "equity", f"A_{year}.csv"), index_col=0, parse_dates=True)
+    eqA = pd.read_csv(os.path.join(res, "equity", f"D_{year}.csv"), index_col=0, parse_dates=True)
     eqB = pd.read_csv(os.path.join(res, "equity", f"B_{year}.csv"), index_col=0, parse_dates=True)
     meta = pd.read_csv(os.path.join(res, "year_meta.csv")).set_index("year").loc[year]
     fig, axs = plt.subplots(3, 1, figsize=(10, 8.2), dpi=150, sharex=True,
@@ -85,21 +85,21 @@ def anatomy(res, out, year):
     ax.set_title(f"{year}{' (YTD to Nov 2)' if year == 2026 else ''}:  NQ price (carry-adjusted, hourly)")
     ax.yaxis.set_major_formatter(mt.StrMethodFormatter("{x:,.0f}"))
     ax = axs[1]
-    ax.step(eqA.index, eqA.units, where="post", color=COL["A"], lw=1.6, label=NAME["A"])
+    ax.step(eqA.index, eqA.units, where="post", color=COL["D"], lw=1.6, label=NAME["D"])
     ax.step(eqB.index, eqB.units, where="post", color=COL["B"], lw=1.6, label=NAME["B"])
     ax.set_title("Contracts held")
     ax.legend(frameon=False, fontsize=8.5, loc="upper left")
     ax = axs[2]
-    ax.plot(eqA.index, eqA.equity_usd, color=COL["A"], lw=1.8, label=NAME["A"])
+    ax.plot(eqA.index, eqA.equity_usd, color=COL["D"], lw=1.8, label=NAME["D"])
     ax.plot(eqB.index, eqB.equity_usd, color=COL["B"], lw=1.8, label=NAME["B"])
     ax.axhline(0, color=AXIS, lw=1)
-    for e, k in ((eqA, "A"), (eqB, "B")):
+    for e, k in ((eqA, "D"), (eqB, "B")):
         v = e.equity_usd.iloc[-1]
         ax.annotate(usd(v), (e.index[-1], v), xytext=(4, -3), textcoords="offset points",
                     fontsize=8.5, color=INK)
     ax.set_title("Cumulative P&L, 1 unit = 1 NQ contract (marked to market)")
     ax.yaxis.set_major_formatter(mt.FuncFormatter(usd_axis))
-    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    ax.legend(frameon=False, fontsize=8.5, loc="best")
     span = eqA.index[-1] - eqA.index[0]
     axs[2].set_xlim(eqA.index[0] - span * 0.01, eqA.index[-1] + span * 0.08)
     fig.tight_layout()

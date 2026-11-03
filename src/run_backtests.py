@@ -21,16 +21,15 @@ from pyramid_backtest import Config, run  # noqa: E402
 YEARS = [2022, 2023, 2024, 2025, 2026]
 
 VARIANTS = {
-    "A": Config(core=True, ladder_below_start=False,
-                name="A: core unit held all year + add-ons above start (as specified)"),
     "D": Config(core=False, ladder_below_start=False,
-                name="D: like A but the first unit also has the 1% stop"),
-    "B": Config(core=False, ladder_below_start=True,
-                name="B: every unit stopped, add on every +1% at ANY price"),
-    "C": Config(core=True, ladder_below_start=True,
-                name="C: core unit + add on every +1% at ANY price"),
+                name="D: as specified - every unit incl. the first stopped 1% below its entry; "
+                     "units only at/above the January price"),
     "E": Config(core=False, ladder_below_start=False, max_ladder=10,
-                name="E: like D but never more than 10 contracts"),
+                name="E: D but never more than 10 contracts"),
+    "B": Config(core=False, ladder_below_start=True,
+                name="B: every unit stopped, buy on every +1% step at ANY price"),
+    "A": Config(core=True, ladder_below_start=False,
+                name="A: first unit held all year without a stop"),
 }
 
 
@@ -114,13 +113,11 @@ def main():
             r = run(bars, cfg)
             s = dict(year=y, key=key, **r.stats)
             rows.append(s)
-            if key in ("A", "D", "B", "E"):
-                r.trades.to_csv(os.path.join(a.out, "trades", f"{key}_{y}.csv"), index=False)
-                daily = pd.DataFrame({"equity_usd": r.equity, "units": r.units,
-                                      "nq": bars["close"]})
-                # hourly snapshot for charts (keeps intraday extremes reasonably)
-                hourly = daily.resample("60min").agg({"equity_usd": "last", "units": "last", "nq": "last"}).dropna()
-                hourly.to_csv(os.path.join(a.out, "equity", f"{key}_{y}.csv"), float_format="%.2f")
+            r.trades.to_csv(os.path.join(a.out, "trades", f"{key}_{y}.csv"), index=False)
+            daily = pd.DataFrame({"equity_usd": r.equity, "units": r.units, "nq": bars["close"]})
+            # hourly snapshot for charts and the closed-form check
+            hourly = daily.resample("60min").agg({"equity_usd": "last", "units": "last", "nq": "last"}).dropna()
+            hourly.to_csv(os.path.join(a.out, "equity", f"{key}_{y}.csv"), float_format="%.2f")
             print(f"   {key} total {s['total_pnl_usd']:>12,.0f}  ladder {s['ladder_pnl_usd']:>12,.0f}"
                   f"  stopouts {s['stopouts']:4d}  maxU {s['max_units']:3d}  ({time.time()-t:.1f}s)", flush=True)
 
@@ -135,7 +132,7 @@ def main():
                                                   "total_pnl_usd", "ladder_pnl_usd", "stopouts",
                                                   "max_units", "max_drawdown_usd", "min_equity_usd")}))
             for cap in (5, 10, 20, 30, None):
-                st = run(bars, Config(core=True, max_ladder=cap)).stats
+                st = run(bars, Config(core=False, max_ladder=cap)).stats
                 cap_rows.append(dict(year=y, cap=cap if cap else "none", **{k: st[k] for k in (
                     "total_pnl_usd", "ladder_pnl_usd", "stopouts", "max_units",
                     "max_drawdown_usd", "min_equity_usd")}))

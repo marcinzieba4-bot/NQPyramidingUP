@@ -18,7 +18,7 @@ def main():
     r = a.results
     s = pd.read_csv(os.path.join(r, "summary_all_variants.csv"))
     yl = lambda y: f"{y} YTD" if y == 2026 else str(y)
-    A = s[s.key == "A"].set_index("year")
+    A = s[s.key == "D"].set_index("year")
     print("### main\n")
     print("| Year | NQ move* | Buy & hold 1 NQ | **Pyramid (as specified)** | Whipsaw stop-outs | Cost of stop-outs | P&L of units held at the end | Max contracts | Worst drawdown from peak |")
     print("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
@@ -28,7 +28,7 @@ def main():
     t = A.sum(numeric_only=True)
     print(f"| **Total** | | **{k(t.buy_hold_1u_usd)}** | **{k(t.total_pnl_usd)}** | {int(t.stopouts)} | {k(t.stopout_loss_usd)} | {k(t.held_units_pnl_usd)} | | |")
     print("\n### variants\n")
-    keys = ["A", "D", "E", "B", "C"]
+    keys = ["D", "E", "B", "A"]
     print("| Year | " + " | ".join(keys) + " | Buy & hold |")
     print("|---|" + "---:|" * (len(keys) + 1))
     piv = s.pivot(index="year", columns="key", values="total_pnl_usd")
@@ -46,9 +46,9 @@ def main():
     for _, x in th.iterrows():
         print(f"| {yl(x.year)} | {x.variant} | {x.move_from_anchor_pct:+.1f}% | {x.trend_sq:.4f} | {x.realised_var:.4f} | "
               f"{x.edge_ratio:.2f} | {x.stopouts_pred} / {x.stopouts_actual} | {k(x.ladder_pnl_pred)} / {k(x.ladder_pnl_actual)} |")
-    print("\n### step/stop (core=True)\n")
+    print("\n### step/stop (variant D)\n")
     ss = pd.read_csv(os.path.join(r, "sensitivity_step_stop.csv"))
-    for core in (True,):
+    for core in (False,):
         x = ss[ss.core == core]
         tot = x.pivot_table(index=["step_pct", "stop_pct"], columns="year", values="total_pnl_usd", aggfunc="sum")
         dd = x.groupby(["step_pct", "stop_pct"]).max_drawdown_usd.min()
@@ -66,7 +66,7 @@ def main():
     tot = c.pivot_table(index="cap", columns="year", values="total_pnl_usd")
     dd = c.groupby("cap").max_drawdown_usd.min()
     order = ["5", "10", "20", "30", "none"]
-    print("| Max add-ons | " + " | ".join(yl(y) for y in tot.columns) + " | 5-yr total | Worst drawdown |")
+    print("| Max contracts | " + " | ".join(yl(y) for y in tot.columns) + " | 5-yr total | Worst drawdown |")
     print("|---:|" + "---:|" * (len(tot.columns) + 2))
     for cap in order:
         row = tot.loc[cap]
