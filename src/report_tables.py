@@ -80,6 +80,7 @@ def main():
               f"{x.stdev:.2f}× | {x.mean_over_stdev:.2f} | {x.worst:+.2f}× | {x.best:+.2f}× |")
     recovery_tables(r)
     long_tables(r)
+    breakout_tables(r)
 
 
 def recovery_tables(r):
@@ -215,6 +216,50 @@ def long_tables(r):
     for _, x in hv.iterrows():
         print(f"| {x.year} | {k(x.recovery_1min)} | {k(x.recovery_hourly)} | {k(x.D_1min)} | {k(x.D_hourly)} |")
     print(f"| **2011-2022** | **{k(hv.recovery_1min.sum())}** | **{k(hv.recovery_hourly.sum())}** | **{k(hv.D_1min.sum())}** | **{k(hv.D_hourly.sum())}** |")
+
+
+
+def breakout_tables(r):
+    bd = os.path.join(r, "breakout")
+    if not os.path.exists(os.path.join(bd, "variants.csv")):
+        return
+    yl = lambda y: f"{y} YTD" if int(y) == 2026 else str(y)
+    sm = pd.read_csv(os.path.join(bd, "summary_by_year.csv")).set_index("year")
+    v = pd.read_csv(os.path.join(bd, "variants.csv"))
+    years = [str(y) for y in sm.index]
+    print("\n### breakout by year\n")
+    print("| Year | **Breakout as specified** | Campaigns (hit +5% / cancelled) | Stop-outs | Max contracts | Recovery entries | Buy & hold |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for y, x in sm.iterrows():
+        print(f"| {yl(y)} | **{k(x.pnl_usd)}** | {int(x.campaigns_started)} ({int(x.hit_target)} / {int(x.cancelled)}) | "
+              f"{int(x.stopouts)} | {int(x.max_contracts)} | {k(x.recovery_usd)} | {k(x.buy_hold_usd)} |")
+    print(f"| **Total** | **{k(sm.pnl_usd.sum())}** | {int(sm.campaigns_started.sum())} ({int(sm.hit_target.sum())} / "
+          f"{int(sm.cancelled.sum())}) | {int(sm.stopouts.sum())} | | **{k(sm.recovery_usd.sum())}** | **{k(sm.buy_hold_usd.sum())}** |")
+    print("\n### breakout variants\n")
+    print("| Variant | 2008-2026 total | Sum of years, x January value | Losing years | Worst year | Worst drawdown | Campaigns (hit target) | Stop-outs | Max contracts |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    notional = sm.notional_usd
+    for _, x in v.iterrows():
+        xs = sum(x[y] / notional[int(y)] for y in years)
+        b = "**" if x.variant.startswith("base") else ""
+        print(f"| {b}{x.variant}{b} | {b}{k(x.total)}{b} | {xs:+.2f}x | {x.losing_years} | {k(x.worst_year)} | "
+              f"{k(x.worst_drawdown)} | {x.campaigns} ({x.hit_target}) | {x.stopouts} | {x.max_contracts} |")
+    gp = os.path.join(bd, "grid_pullback_target.csv")
+    if os.path.exists(gp):
+        g = pd.read_csv(gp)
+        print("\n### breakout grid\n")
+        tps = sorted(g.target_pct.unique())
+        print("| Pullback before the breakout | " + " | ".join(f"Target +{t:g}%" for t in tps) + " |")
+        print("|---|" + "---:|" * len(tps))
+        for pb, gg in g.groupby("pullback_pct"):
+            cells = []
+            for t in tps:
+                x = gg[gg.target_pct == t].iloc[0]
+                cells.append(f"{k(x.total)} ({k(x.total_2008_2015)} / {k(x.total_2016_2026)})")
+            print(f"| {pb:g}% | " + " | ".join(cells) + " |")
+    hv = pd.read_csv(os.path.join(bd, "hourly_vs_minute.csv"))
+    print("\n### breakout hourly check\n")
+    print(f"2011-2022, breakout as specified: 1-minute bars {k(hv.breakout_1min.sum())}, hourly bars {k(hv.breakout_hourly.sum())}")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
 
 All dollar figures are for **1 unit = 1 NQ contract ($20 per point)**. **For MNQ, divide every dollar figure by 10.** Figures are net of costs (0.5 pt slippage plus $2.50 commission per contract per side). The 2026 run stops at the **November 2, 2026** close (year to date).
 
-**New:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls).
+**New:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls). A breakout version (beat the 1-year high after a 3% pullback, +5% target, 0.5% steps) is in [Breakout entries](#breakout-entries-beating-the-1-year-high-after-a-3-pullback).
 
 ## The answer
 
@@ -262,6 +262,84 @@ How much the call result depends on the option-price assumptions (option P&L for
 
 Files: `results/long/` (yearly summary, campaigns and trades, variants, covered calls and their stress test, data sources, hourly-vs-1-minute check, daily equity). Code: `src/long_history.py`, `src/run_long.py`, `src/options_overlay.py`, `src/calls_sensitivity.py`, `src/fetch_histdata.py`.
 
+## Breakout entries: beating the 1-year high after a 3% pullback
+
+Same pyramid idea, but entering on a breakout instead of a rebound:
+
+1. **Reference.** The 1-year high: the highest NQ price of the previous 365 days, on the rolled NQ price path, with history before January included.
+2. **Setup.** NQ has been at least 3% below that high since it was made.
+3. **Entry.** When NQ then trades above the 1-year high, buy 1 unit there (buy-stop at the old high).
+4. **Pyramid.** +1 unit every +0.5%. Each unit is stopped 0.5% below its entry and bought again if price climbs back through its level. I read "step 0.5%" as applying to the stop as well, as in the original 1% / 1% rule; a 1% stop is shown as a variant.
+5. **Target.** Sell everything at +5% above the entry, then wait for a new 3% pullback.
+6. **Cancel.** If NQ falls 3% below the 1-year high again first, sell what is left; the next break of the 1-year high is the new entry.
+
+Same data, costs and years (2008 to Nov 2, 2026; each year starts fresh in January). 1 unit = 1 NQ contract; divide by 10 for MNQ.
+
+| Year | **Breakout as specified** | Campaigns (hit +5% / cancelled) | Stop-outs | Max contracts | Recovery entries | Buy & hold |
+|---|---:|---:|---:|---:|---:|---:|
+| 2008 | **$0** | 0 (0 / 0) | 0 | 0 | -$9k | -$19k |
+| 2009 | **-$4k** | 4 (0 / 3) | 35 | 8 | +$20k | +$13k |
+| 2010 | **+$8k** | 3 (2 / 0) | 62 | 10 | -$2k | +$7k |
+| 2011 | **-$6k** | 3 (0 / 3) | 24 | 5 | -$39k | +$1k |
+| 2012 | **+$6k** | 2 (1 / 1) | 26 | 10 | -$12k | +$6k |
+| 2013 | **+$30k** | 3 (3 / 0) | 60 | 10 | +$35k | +$18k |
+| 2014 | **+$13k** | 4 (2 / 2) | 73 | 10 | +$42k | +$15k |
+| 2015 | **-$14k** | 5 (0 / 5) | 28 | 7 | -$70k | +$6k |
+| 2016 | **-$28k** | 3 (0 / 2) | 54 | 7 | +$32k | +$9k |
+| 2017 | **+$9k** | 4 (1 / 2) | 38 | 10 | +$65k | +$31k |
+| 2018 | **-$42k** | 5 (0 / 5) | 56 | 5 | +$37k | -$4k |
+| 2019 | **+$17k** | 4 (1 / 2) | 54 | 10 | +$32k | +$50k |
+| 2020 | **+$91k** | 9 (3 / 5) | 83 | 10 | +$167k | +$86k |
+| 2021 | **-$3k** | 8 (2 / 6) | 111 | 10 | +$97k | +$71k |
+| 2022 | **$0** | 0 (0 / 0) | 0 | 0 | $0 | -$111k |
+| 2023 | **-$21k** | 4 (0 / 3) | 46 | 9 | +$211k | +$102k |
+| 2024 | **-$28k** | 9 (1 / 8) | 69 | 10 | +$127k | +$70k |
+| 2025 | **-$117k** | 4 (0 / 4) | 58 | 9 | +$108k | +$63k |
+| 2026 YTD | **+$19k** | 3 (1 / 2) | 45 | 10 | +$246k | +$33k |
+| **Total** | **-$72k** | 77 (17 / 53) | 922 | | **+$1.09M** | **+$448k** |
+
+Worst drawdown: **-$289k**. Run straight through instead of restarting each January: -$45k.
+
+![Breakout vs recovery 2008-2026](results/charts/breakout_2008_2026.png)
+
+**Variants (one setting changed at a time):**
+
+| Variant | 2008-2026 total | Sum of years, x January value | Losing years | Worst year | Worst drawdown | Campaigns (hit target) | Stop-outs | Max contracts |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **base: 3% pullback, +5% target, 0.5% step, 0.5% stop** | **-$72k** | +0.25x | 9 | -$117k | -$289k | 77 (17) | 922 | 10 |
+| stop 1% (step 0.5%) | -$13k | +0.81x | 8 | -$111k | -$308k | 77 (17) | 402 | 10 |
+| step 1%, stop 1% | -$71 | +0.51x | 9 | -$63k | -$161k | 77 (17) | 220 | 5 |
+| target +3% | +$305k | +1.04x | 7 | -$42k | -$95k | 77 (38) | 593 | 6 |
+| target +8% | -$169k | -0.81x | 12 | -$124k | -$490k | 77 (5) | 1115 | 16 |
+| target +12% | -$270k | -0.45x | 13 | -$124k | -$573k | 77 (1) | 1175 | 23 |
+| 5% pullback | +$299k | +0.88x | 6 | -$80k | -$187k | 46 (18) | 849 | 10 |
+| no target (hold to year end) | -$287k | -0.80x | 13 | -$124k | -$573k | 77 (0) | 1199 | 28 |
+
+("Sum of years, x January value" adds up each year's result in units of one contract's January value, so the cheap early years count as much as the expensive recent ones. For comparison, buy & hold sums to about +3.2x and the recovery entries to about +4.8x.)
+
+**Pullback × target grid** (0.5% step and stop; 2008–2026 total, then 2008–2015 / 2016–2026 in brackets):
+
+| Pullback before the breakout | Target +2% | Target +3% | Target +4% | Target +5% |
+|---|---:|---:|---:|---:|
+| 3% | +$94k (+$12k / +$82k) | +$305k (+$24k / +$281k) | +$179k (-$442 / +$179k) | -$72k (+$32k / -$104k) |
+| 5% | +$18k (-$9k / +$27k) | +$87k (-$6k / +$93k) | +$306k (-$26k / +$332k) | +$299k (+$5k / +$294k) |
+| 8% | +$25k (-$3k / +$27k) | +$139k (+$3k / +$136k) | +$361k (+$23k / +$338k) | +$345k (+$49k / +$296k) |
+
+**What this means:**
+
+- **As specified, the breakout version lost money:** -$72k over 2008–2026, with 9 losing years and a worst drawdown of -$289k.
+  - Only 17 of 77 breakouts reached +5%. 53 fell 3% from the high first, so the breakout failed.
+  - In level-adjusted terms (+0.25x over 19 years) it is break-even: no edge.
+- **Every nearby setting made a little money, but less than simply holding NQ.**
+  - The best cells made about +$300k to +$360k over 19 years, against +$448k for buy & hold and +$1.09M for the recovery entries.
+  - Almost all of it came after 2016. In 2008–2015, every cell was close to zero.
+- **Small or deep is the pattern.** After a 3% pullback, take profits quickly (+3%). After a deeper pullback (5–8%), +4% or +5% targets work. Big targets (+8%, +12%, none) lose: breaks above the old high often fade before running far.
+- **0.5% steps mean many more stop-outs:** 922 against 220 with 1% steps. A 1% stop cuts them to 402 and the loss to -$13k.
+- **Bottom line:** buying the rebound from a pullback (the recovery entry) worked much better than buying the break above the old high.
+- **Data caveat for 0.5% steps:** hourly bars are not reliable here. On 2011–2022, the hourly simulation gave -$86k against +$71k on 1-minute bars. So treat the 2008–2010 breakout numbers as rough (they are small in dollars either way).
+
+Files: `results/breakout/` (yearly summary, campaigns, trades, variants, grid, hourly check). Code: `src/breakout_backtest.py` (rules, with self-tests) and `src/run_breakout.py` (`--grid` for the pullback × target table).
+
 ## Variants (same data, same costs)
 
 | Year | D as specified | E = D, max 10 contracts | B re-buys below January price | A first unit not stopped | Buy & hold |
@@ -446,10 +524,18 @@ python3 src/calls_sensitivity.py --dukascopy data/dukascopy/USATECHIDXUSD_1min_m
 ```
 
 ```bash
+python3 src/run_breakout.py --dukascopy data/dukascopy/USATECHIDXUSD_1min_mid.csv.gz --histdata data/histdata/NSXUSD_1min.csv.gz --hf data/hf_nasdaq60 --yahoo data/yahoo --out results
+```
+
+```bash
+python3 src/run_breakout.py --grid --dukascopy data/dukascopy/USATECHIDXUSD_1min_mid.csv.gz --histdata data/histdata/NSXUSD_1min.csv.gz --hf data/hf_nasdaq60 --yahoo data/yahoo --out results
+```
+
+```bash
 python3 src/make_charts.py --results results && python3 src/report_tables.py --results results
 ```
 
-The Dukascopy download (about 3,500 small files) throttles. The script retries and resumes from its cache. The engine self-tests run with `python3 src/pyramid_backtest.py`, `python3 src/recovery_backtest.py` and `python3 src/options_overlay.py`.
+The Dukascopy download (about 3,500 small files) throttles. The script retries and resumes from its cache. The engine self-tests run with `python3 src/pyramid_backtest.py`, `python3 src/recovery_backtest.py`, `python3 src/breakout_backtest.py` and `python3 src/options_overlay.py`.
 
 ## Files
 
@@ -462,6 +548,7 @@ The Dukascopy download (about 3,500 small files) throttles. The script retries a
 | `src/history_estimate.py` | 1986 to 2025 model estimate from daily data |
 | `src/recovery_backtest.py`, `src/run_recovery.py` | Recovery-entry version: rules, fills, self-tests; runner and sensitivity |
 | `src/long_history.py`, `src/run_long.py` | 2008–2026: stitched yearly NQ series from three sources; recovery strategy, variants, covered calls |
+| `src/breakout_backtest.py`, `src/run_breakout.py` | 1-year-high breakout version: rules (with self-tests), runner, variants and grid |
 | `src/options_overlay.py`, `src/calls_sensitivity.py` | Covered-call overlay (Black-76 priced from VXN, with self-tests) and its stress test |
 | `src/fetch_histdata.py` | HistData 1-minute download, with the timestamp correction |
 | `src/make_charts.py`, `src/report_tables.py` | Charts and README tables |

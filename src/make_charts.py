@@ -235,6 +235,36 @@ def long_charts(res, out):
     plt.close(fig)
 
 
+def breakout_chart(res, out):
+    v = pd.read_csv(os.path.join(res, "breakout", "variants.csv")).set_index("variant")
+    s = pd.read_csv(os.path.join(res, "breakout", "summary_by_year.csv")).set_index("year")
+    years = [y for y in s.index]
+    cols = [str(y) for y in years]
+    base = v.index[0]
+    lines = [(v.loc[base, cols].astype(float), COL["D"], "Breakout as specified (3% pullback, +5% target, 0.5% step)"),
+             (v.loc["target +3%", cols].astype(float), COL["E"], "Breakout, +3% target"),
+             (v.loc["5% pullback", cols].astype(float), "#eda100", "Breakout, 5% pullback"),
+             (s["recovery_usd"].astype(float), COL["B"], "Recovery entries (5% pullback, 70% entry, +12% reset)"),
+             (s["buy_hold_usd"].astype(float), COL["BH"], "Buy & hold 1 contract")]
+    fig, ax = plt.subplots(figsize=(11, 5.6), dpi=150)
+    for ser, color, lab in lines:
+        cum = pd.Series(ser.values, index=years).cumsum()
+        ax.plot(years, cum.values, color=color, lw=1.8, marker="o", ms=3.5,
+                label=f"{lab}:  {usd(cum.iloc[-1])}")
+    ax.axhline(0, color=AXIS, lw=1)
+    ax.set_xticks(years)
+    ax.set_xticklabels([str(y) if y < 2026 else "2026\nYTD" for y in years], fontsize=8.5, color=INK2)
+    ax.grid(axis="x", visible=False)
+    ax.yaxis.set_major_formatter(mt.FuncFormatter(usd_axis))
+    ax.set_title("Cumulative P&L through each year, 2008-2026, 1 unit = 1 NQ contract")
+    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    fig.text(0.01, 0.01, "Each year starts fresh in January. 2026 = to Nov 2. The pyramid from the January open "
+             "(+$4.40M) is left out to keep the scale readable.", fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.savefig(os.path.join(out, "breakout_2008_2026.png"))
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default="results")
@@ -248,4 +278,6 @@ if __name__ == "__main__":
         recovery_chart(a.results, out)
     if os.path.exists(os.path.join(a.results, "long", "equity_daily.csv")):
         long_charts(a.results, out)
+    if os.path.exists(os.path.join(a.results, "breakout", "variants.csv")):
+        breakout_chart(a.results, out)
     print("charts written to", out)
