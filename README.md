@@ -4,7 +4,7 @@
 
 All dollar figures are for **1 unit = 1 NQ contract ($20 per point)**. **For MNQ, divide every dollar figure by 10.** Figures are net of costs (0.5 pt slippage plus $2.50 commission per contract per side). The 2026 run stops at the **November 2, 2026** close (year to date).
 
-**New:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls). A breakout version (beat the 1-year high after a 3% pullback, +5% target, 0.5% steps) is in [Breakout entries](#breakout-entries-beating-the-1-year-high-after-a-3-pullback).
+**New:** a version that only starts the pyramid when NQ recovers from a 5% pullback is in [Only trading recoveries from 5% pullbacks](#only-trading-recoveries-from-5-pullbacks). The same strategy over 2008 to 2026, with variants and covered calls, is in [2008 to 2026](#2008-to-2026-recovery-entries-variants-and-covered-calls). A breakout version (beat the 1-year high after a 3% pullback, +5% target, 0.5% steps) is in [Breakout entries](#breakout-entries-beating-the-1-year-high-after-a-3-pullback). Entering at 30% of the rebound, with 20-delta calls, is in [Recovery entries at 30%](#recovery-entries-at-30-of-the-rebound-with-20-delta-calls).
 
 ## The answer
 
@@ -340,6 +340,75 @@ Worst drawdown: **-$289k**. Run straight through instead of restarting each Janu
 
 Files: `results/breakout/` (yearly summary, campaigns, trades, variants, grid, hourly check). Code: `src/breakout_backtest.py` (rules, with self-tests) and `src/run_breakout.py` (`--grid` for the pullback × target table).
 
+## Recovery entries at 30% of the rebound, with 20-delta calls
+
+Same recovery rules: a 5% pullback arms a wave, 1% step and 1% stop per unit, sell everything at +12% (reset), and cancel on a new low. The only change is the entry: the first unit is bought when NQ has recovered **30%** of the wave (wave low + 30% × (high − low)) instead of 70%. Same data, costs and years (2008 to Nov 2, 2026; each year starts fresh in January). 1 unit = 1 NQ contract; divide by 10 for MNQ.
+
+| Year | NQ move | **Entry at 30%** | Campaigns (hit +12% / cancelled) | Stop-outs | Max contracts | Entry at 70% (previous base) | Buy & hold |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 2008 | -44% | **-$13k** | 11 (1 / 10) | 103 | 12 | -$9k | -$19k |
+| 2009 | +55% | **+$27k** | 13 (4 / 8) | 207 | 12 | +$20k | +$13k |
+| 2010 | +18% | **+$20k** | 6 (2 / 3) | 101 | 12 | -$2k | +$7k |
+| 2011 | +2% | **-$47k** | 8 (1 / 6) | 171 | 12 | -$39k | +$1k |
+| 2012 | +13% | **+$14k** | 6 (1 / 4) | 47 | 12 | -$12k | +$6k |
+| 2013 | +33% | **+$36k** | 2 (1 / 1) | 13 | 12 | +$35k | +$18k |
+| 2014 | +21% | **+$88k** | 4 (2 / 1) | 33 | 12 | +$42k | +$15k |
+| 2015 | +7% | **+$43k** | 4 (2 / 1) | 92 | 12 | -$70k | +$6k |
+| 2016 | +10% | **+$73k** | 11 (2 / 8) | 72 | 12 | +$32k | +$9k |
+| 2017 | +32% | **+$70k** | 1 (1 / 0) | 13 | 12 | +$65k | +$31k |
+| 2018 | -3% | **-$108k** | 9 (1 / 7) | 146 | 12 | +$37k | -$4k |
+| 2019 | +40% | **+$963** | 3 (1 / 2) | 69 | 12 | +$32k | +$50k |
+| 2020 | +49% | **+$321k** | 12 (5 / 7) | 198 | 12 | +$167k | +$86k |
+| 2021 | +27% | **+$163k** | 9 (2 / 6) | 97 | 12 | +$97k | +$71k |
+| 2022 | -34% | **-$251k** | 6 (0 / 6) | 86 | 9 | $0 | -$111k |
+| 2023 | +46% | **+$224k** | 7 (2 / 5) | 63 | 12 | +$211k | +$102k |
+| 2024 | +21% | **+$325k** | 6 (2 / 3) | 55 | 12 | +$127k | +$70k |
+| 2025 | +15% | **-$96k** | 8 (1 / 6) | 89 | 12 | +$108k | +$63k |
+| 2026 YTD | +6% | **-$257k** | 9 (1 / 7) | 109 | 12 | +$246k | +$33k |
+| **Total** | | **+$634k** | 135 (32 / 91) | 1764 | | **+$1.09M** | **+$448k** |
+| x one contract's January value, summed | | +6.64x | | | | +4.82x | +3.16x |
+
+Worst drawdown: **-$534k** (-$374k for the 70% entry). Run straight through instead of restarting each January: +$620k.
+
+![30% entry vs 70% entry, with calls](results/charts/recovery30_2008_2026.png)
+
+**Every entry level tested (everything else unchanged):**
+
+| Entry at | 2008-2026 total | Level-adjusted sum (x January value) | 2008-2021 | 2022-2026 | Losing years | Worst drawdown | Campaigns (hit +12%) |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 20% | +$1.09M | +7.88x | +$1.05M | +$43k | 5 | -$504k | 234 (38) |
+| **30% (this test)** | **+$634k** | +6.64x | +$689k | -$55k | 6 | -$534k | 135 (32) |
+| 40% | +$1.16M | +6.61x | +$741k | +$417k | 6 | -$456k | 89 (27) |
+| 50% | +$1.41M | +7.33x | +$732k | +$673k | 4 | -$363k | 72 (23) |
+| 61.8% | +$1.45M | +7.52x | +$581k | +$869k | 5 | -$249k | 52 (20) |
+| 70% (previous base) | +$1.09M | +4.82x | +$396k | +$692k | 5 | -$374k | 44 (17) |
+| 80% | +$1.00M | +4.45x | +$292k | +$712k | 6 | -$344k | 37 (16) |
+| Buy & hold | +$448k | +3.16x | +$291k | +$157k | | | |
+
+"Level-adjusted" adds up each year's result in units of one contract's January value. This stops the expensive recent years (NQ at 20,000+) from drowning out the cheap early ones (NQ at 1,200–4,000). Since you will trade at today's prices, it is arguably the better guide to a typical year.
+
+**Selling 20-delta calls against every contract held** (30% entry; total, with the option P&L in brackets):
+
+| Overlay | ATM vol 0.8 x VXN | 0.9 x VXN (base) | 1.0 x VXN | Worst drawdown (base) |
+|---|---:|---:|---:|---:|
+| No calls | | +$634k | | -$534k |
+| Sell 20-delta 30-day calls | +$412k (-$222k) | +$706k (+$72k) | +$971k (+$337k) | -$468k |
+| Sell 20-delta 7-day calls | +$522k (-$112k) | +$988k (+$354k) | +$1.40M (+$769k) | -$450k |
+
+**What this means:**
+
+- **In dollars, the 30% entry made +$634k:** about 40% less than the 70% entry (+$1.09M), with a bigger worst drawdown (-$534k).
+  - It lost $251k in 2022, $96k in 2025 and $257k in 2026.
+  - Buying only 30% into a rebound means buying many bounces that fail: 91 of 135 campaigns were cancelled by a new low.
+- **Level-adjusted it looks better** (+6.64x against +4.82x), because its good years were the earlier, cheaper ones. The chart shows it was ahead of the 70% entry for most of 2014–2025 and fell behind only in 2026.
+- **There is a regime split.** Early entries (20–40%) did best before 2022 and worst since; late entries (70–80%) did the opposite.
+- **50–62% is the only zone that did well in both periods:** +$1.41M to +$1.45M, level-adjusted +7.3x to +7.5x, with drawdowns of -$249k to -$363k. This was chosen with hindsight, so treat it as the region to prefer rather than an optimum.
+- **20-delta calls helped the 30% version in the base case:** +$72k (monthly) and +$354k (weekly), with smaller drawdowns.
+  - If the calls are priced a little cheaper (0.8x VXN), both lose money (-$222k and -$112k).
+  - Same verdict as before: a bet on option prices rather than a reliable improvement. Covered-call funds on the Nasdaq-100 have generally lagged the index in strong markets.
+
+Files: `results/recovery30/` (yearly summary, campaigns, trades, entry-level neighbours, covered calls with the pricing stress test, daily equity). Code: `src/run_variant.py`, a reusable runner for any recovery setting, e.g. `--retrace 0.30 --neighbors retrace=0.2,0.4,0.5`.
+
 ## Variants (same data, same costs)
 
 | Year | D as specified | E = D, max 10 contracts | B re-buys below January price | A first unit not stopped | Buy & hold |
@@ -532,6 +601,10 @@ python3 src/run_breakout.py --grid --dukascopy data/dukascopy/USATECHIDXUSD_1min
 ```
 
 ```bash
+python3 src/run_variant.py --name recovery30 --retrace 0.30 --neighbors retrace=0.2,0.4,0.5 --dukascopy data/dukascopy/USATECHIDXUSD_1min_mid.csv.gz --histdata data/histdata/NSXUSD_1min.csv.gz --hf data/hf_nasdaq60 --yahoo data/yahoo --out results
+```
+
+```bash
 python3 src/make_charts.py --results results && python3 src/report_tables.py --results results
 ```
 
@@ -548,6 +621,7 @@ The Dukascopy download (about 3,500 small files) throttles. The script retries a
 | `src/history_estimate.py` | 1986 to 2025 model estimate from daily data |
 | `src/recovery_backtest.py`, `src/run_recovery.py` | Recovery-entry version: rules, fills, self-tests; runner and sensitivity |
 | `src/long_history.py`, `src/run_long.py` | 2008–2026: stitched yearly NQ series from three sources; recovery strategy, variants, covered calls |
+| `src/run_variant.py` | Any recovery setting on 2008–2026 in one command: both modes, neighbours, 20-delta calls with a pricing stress test |
 | `src/breakout_backtest.py`, `src/run_breakout.py` | 1-year-high breakout version: rules (with self-tests), runner, variants and grid |
 | `src/options_overlay.py`, `src/calls_sensitivity.py` | Covered-call overlay (Black-76 priced from VXN, with self-tests) and its stress test |
 | `src/fetch_histdata.py` | HistData 1-minute download, with the timestamp correction |

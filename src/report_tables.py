@@ -81,6 +81,7 @@ def main():
     recovery_tables(r)
     long_tables(r)
     breakout_tables(r)
+    variant_tables(r, "recovery30")
 
 
 def recovery_tables(r):
@@ -260,6 +261,60 @@ def breakout_tables(r):
     hv = pd.read_csv(os.path.join(bd, "hourly_vs_minute.csv"))
     print("\n### breakout hourly check\n")
     print(f"2011-2022, breakout as specified: 1-minute bars {k(hv.breakout_1min.sum())}, hourly bars {k(hv.breakout_hourly.sum())}")
+
+
+
+def variant_tables(r, name):
+    vd = os.path.join(r, name)
+    if not os.path.exists(os.path.join(vd, "neighbors.csv")):
+        return
+    yl = lambda y: f"{y} YTD" if int(y) == 2026 else str(y)
+    sm = pd.read_csv(os.path.join(vd, "summary_by_year.csv")).set_index("year")
+    n = sm.notional_usd
+    print(f"\n### {name} by year\n")
+    print("| Year | NQ move | **Entry at 30%** | Campaigns (hit +12% / cancelled) | Stop-outs | Max contracts | Entry at 70% (previous base) | Buy & hold |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|")
+    for y, x in sm.iterrows():
+        print(f"| {yl(y)} | {x.nq_move_pct:+.0f}% | **{k(x.pnl_usd)}** | {int(x.campaigns_started)} ({int(x.hit_target)} / "
+              f"{int(x.cancelled)}) | {int(x.stopouts)} | {int(x.max_contracts)} | {k(x.recovery_70pct_usd)} | {k(x.buy_hold_usd)} |")
+    print(f"| **Total** | | **{k(sm.pnl_usd.sum())}** | {int(sm.campaigns_started.sum())} ({int(sm.hit_target.sum())} / "
+          f"{int(sm.cancelled.sum())}) | {int(sm.stopouts.sum())} | | **{k(sm.recovery_70pct_usd.sum())}** | **{k(sm.buy_hold_usd.sum())}** |")
+    print(f"| x one contract's January value, summed | | {(sm.pnl_usd / n).sum():+.2f}x | | | | "
+          f"{(sm.recovery_70pct_usd / n).sum():+.2f}x | {(sm.buy_hold_usd / n).sum():+.2f}x |")
+    nb = pd.read_csv(os.path.join(vd, "neighbors.csv"))
+    lv = pd.read_csv(os.path.join(r, "long", "variants.csv"))
+    ys = [str(y) for y in sm.index]
+    entries = []
+    for _, x in nb.iterrows():
+        pct = 30.0 if x.setting.startswith("this variant") else float(x.setting.split()[-1]) * 100
+        entries.append((pct, x))
+    for name_, pct in (("entry at 61.8% retracement", 61.8), ("base: 5% pullback, 70% entry, +12% reset", 70.0),
+                       ("entry at 80% retracement", 80.0)):
+        entries.append((pct, lv[lv.variant == name_].iloc[0]))
+    print(f"\n### {name} neighbors\n")
+    print("| Entry at | 2008-2026 total | Level-adjusted sum (x January value) | 2008-2021 | 2022-2026 | Losing years | Worst drawdown | Campaigns (hit +12%) |")
+    print("|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for pct, x in sorted(entries, key=lambda t: t[0]):
+        la = sum(x[y] / n[int(y)] for y in ys)
+        early = sum(x[y] for y in ys if int(y) <= 2021)
+        recent = sum(x[y] for y in ys if int(y) >= 2022)
+        b = "**" if pct == 30.0 else ""
+        tag = " (this test)" if pct == 30.0 else (" (previous base)" if pct == 70.0 else "")
+        print(f"| {b}{pct:g}%{tag}{b} | {b}{k(x.total)}{b} | {la:+.2f}x | {k(early)} | {k(recent)} | {x.losing_years} | "
+              f"{k(x.worst_drawdown)} | {x.campaigns} ({x.hit_target}) |")
+    print(f"| Buy & hold | {k(sm.buy_hold_usd.sum())} | {(sm.buy_hold_usd / n).sum():+.2f}x | "
+          f"{k(sm.buy_hold_usd[sm.index <= 2021].sum())} | {k(sm.buy_hold_usd[sm.index >= 2022].sum())} | | | |")
+    cc = pd.read_csv(os.path.join(vd, "covered_calls.csv"))
+    print(f"\n### {name} calls\n")
+    print("| Overlay | ATM vol 0.8 x VXN | 0.9 x VXN (base) | 1.0 x VXN | Worst drawdown (base) |")
+    print("|---|---:|---:|---:|---:|")
+    b = cc[cc.overlay == "no calls"].iloc[0]
+    print(f"| No calls | | {k(b.total)} | | {k(b.worst_drawdown)} |")
+    for ov in ("sell 20-delta 30-day calls", "sell 20-delta 7-day calls"):
+        g = cc[cc.overlay == ov]
+        cell = lambda v: (lambda x: f"{k(x.total)} ({k(x.option_pnl)})")(g[g.vol_vs_vxn.astype(float) == v].iloc[0])
+        dd = g[g.vol_vs_vxn.astype(float) == 0.9].iloc[0].worst_drawdown
+        print(f"| {ov[0].upper() + ov[1:]} | {cell(0.8)} | {cell(0.9)} | {cell(1.0)} | {k(dd)} |")
 
 
 if __name__ == "__main__":

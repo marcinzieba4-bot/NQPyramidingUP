@@ -265,6 +265,32 @@ def breakout_chart(res, out):
     plt.close(fig)
 
 
+def variant_chart(res, name, title, out):
+    vd = os.path.join(res, name)
+    eq = pd.read_csv(os.path.join(vd, "equity_daily.csv"), index_col=0, parse_dates=True)
+    led = pd.read_csv(os.path.join(res, "long", "equity_daily.csv"), index_col=0, parse_dates=True)
+    fig, ax = plt.subplots(figsize=(11, 5.6), dpi=150)
+    lines = [(eq["variant + sell 20-delta 7-day calls"], COL["E"], f"{title} + sell 20-delta 7-day calls"),
+             (eq["variant"], COL["D"], title),
+             (eq["variant + sell 20-delta 30-day calls"], "#eda100", f"{title} + sell 20-delta 30-day calls"),
+             (led["recovery"], COL["B"], "Recovery entries at 70% (previous base)"),
+             (led["buy_hold"], COL["BH"], "Buy & hold 1 contract")]
+    order = sorted(lines, key=lambda t: -t[0].dropna().iloc[-1])      # legend in end-value order
+    for ser, color, lab in order:
+        v = ser.dropna()
+        ax.plot(v.index, v.values, color=color, lw=1.5, label=f"{lab}:  {usd(v.iloc[-1])}")
+    ax.axhline(0, color=AXIS, lw=1)
+    ax.yaxis.set_major_formatter(mt.FuncFormatter(usd_axis))
+    ax.set_title("Cumulative P&L since Jan 2008, 1 unit = 1 NQ contract  (MNQ: divide by 10)")
+    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    fig.text(0.01, 0.01, "Each year starts fresh in January; 2026 = to Nov 2. Calls priced with Black-76 at "
+             "0.9 x VXN (base assumption); option P&L booked when each contract is closed.",
+             fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.savefig(os.path.join(out, f"{name}_2008_2026.png"))
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default="results")
@@ -280,4 +306,6 @@ if __name__ == "__main__":
         long_charts(a.results, out)
     if os.path.exists(os.path.join(a.results, "breakout", "variants.csv")):
         breakout_chart(a.results, out)
+    if os.path.exists(os.path.join(a.results, "recovery30", "equity_daily.csv")):
+        variant_chart(a.results, "recovery30", "Recovery entries at 30%", out)
     print("charts written to", out)
