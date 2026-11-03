@@ -1,0 +1,4 @@
+# downloaded market data (re-create with src/fetch_*.py)
+data/
+__pycache__/
+*.pyc
